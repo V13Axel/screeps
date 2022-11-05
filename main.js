@@ -22,6 +22,7 @@ function cleanupDeadCreeps() {
 };
 
 function constructWithEnergyBudget(role, budget) {
+    return role.definition;
     let parts = [];
     
     for (var partName in role.partsBudgets) {
@@ -51,10 +52,10 @@ module.exports.loop = function () {
 
         creeps.forEach(creep => roleDetails.run(creep));
         
-        if(creeps.length < desiredNumber) {
+        if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable > 300) {
             let body = constructWithEnergyBudget(
                     roleDetails,
-                    activeSpawn.room.energyAvailable
+                    (activeSpawn.room.energyAvailable * .8)
                 );
             let name = role + Game.time;
             let memory = { memory: { role } };

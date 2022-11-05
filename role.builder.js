@@ -35,6 +35,7 @@ var roleBuilder = {
 		}
 	    } else {
 		let attempt = creep.moveTo(Game.spawns['Spawn1'], {vizualizePathStyle: {stroke: '#fefefe'}});
+		console.log('here');
 	    }
 	}
 	else {

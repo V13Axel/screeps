@@ -1,17 +1,17 @@
 var roleMaintainer = {
-    desiredNumber: 2,
+    desiredNumber: 1,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
-            costModifier: .3,
+            costModifier: .5,
             cost: 100
         },
         [CARRY]: {
-            costModifier: .40,
+            costModifier: .25,
             cost: 50
         },
         [MOVE]: {
-            costModifier: .30,
+            costModifier: .25,
             cost: 50
         },
     },
@@ -19,6 +19,9 @@ var roleMaintainer = {
     /** @param {Creep} creep **/
     run: function(creep) {
         switch(creep.memory.action) {
+            case 'cleanup':
+                this.cleanup(creep);
+                break;
             case 'fixing':
                 this.fix(creep);
                 break;
@@ -29,11 +32,22 @@ var roleMaintainer = {
                 this.wait(creep);
                 break;
             default:
-                creep.memory.action = 'harvest';
+                creep.memory.action = 'cleanup';
         }
 
     },
 
+    cleanup: function(creep) {
+        let dropped = creep.room.find(FIND_DROPPED_RESOURCES);
+        if(!dropped.length) {
+            creep.memory.action = 'waiting';
+            return;
+        }
+
+        if(creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(dropped[0]);
+        }
+    },
 
     harvest: function(creep) {
         if(creep.store.getFreeCapacity() == 0) {
@@ -70,7 +84,7 @@ var roleMaintainer = {
                 creep.moveTo(creep.memory.fixing);
                 break;
             default:
-                console.log(creep.name + "Repair attmept returned code: " + attempt);
+                console.log(creep.name + "Repair attempt returned code: " + attempt);
                 break;
         }
 
