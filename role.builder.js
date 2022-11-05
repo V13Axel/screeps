@@ -1,6 +1,20 @@
 var roleBuilder = {
     desiredNumber: 4,
     definition: [WORK, MOVE, CARRY],
+    partsBudgets: {
+        [WORK]: {
+            costModifier: .3,
+            cost: 100
+        },
+        [CARRY]: {
+            costModifier: .40,
+            cost: 50
+        },
+        [MOVE]: {
+            costModifier: .30,
+            cost: 50
+        },
+    },
 
     /** @param {Creep} creep **/
     run: function(creep) {
@@ -29,7 +43,7 @@ var roleBuilder = {
 		creep.moveTo(sources[1], {visualizePathStyle: {stroke: '#ffaa00'}});
 	    }
 	}
-    }
+    },
 };
 
 module.exports = roleBuilder;

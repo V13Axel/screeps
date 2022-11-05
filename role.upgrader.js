@@ -1,6 +1,20 @@
 var roleUpgrader = {
     desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
+    partsBudgets: {
+        [WORK]: {
+            costModifier: .3,
+            cost: 100
+        },
+        [CARRY]: {
+            costModifier: .40,
+            cost: 50
+        },
+        [MOVE]: {
+            costModifier: .30,
+            cost: 50
+        },
+    },
 
     /** @param {Creep} creep **/
     run: function(creep) {
@@ -25,7 +39,7 @@ var roleUpgrader = {
                 creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
             }
         }
-	}
+    },
 };
 
 module.exports = roleUpgrader;

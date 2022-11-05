@@ -1,16 +1,15 @@
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
-
-var sourceDirector = require('sourcedirector');
+const roleMaintainer = require('./role.maintainer');
 
 var roles = {
     'harvester': roleHarvester,
     'upgrader': roleUpgrader,
     'builder': roleBuilder,
+    'maintainer': roleMaintainer,
 }
 
-var ticksSinceFilledDirector = 0;
 
 function cleanupDeadCreeps() {
     let alive = Object.keys(Game.creeps);
@@ -20,18 +19,30 @@ function cleanupDeadCreeps() {
             console.log('Freed memory of ' + name);
         }
     }
-}
+};
+
+function constructWithEnergyBudget(role, budget) {
+    let parts = [];
+    
+    for (var partName in role.partsBudgets) {
+        let details = role.partsBudgets[partName];
+        let count = Math.floor((details.costModifier * budget) / details.cost);
+
+        for(let i = 0; i < count; i++) {
+            parts.push(partName);
+        }
+    }
+
+    if(parts.length < 3) {
+        return role.definition;
+    }
+
+    return parts; 
+};
 
 module.exports.loop = function () {
     cleanupDeadCreeps();
-
-    // ticksSinceFilledDirector++;
-    // if(ticksSinceFilledDirector > 120) {
-    //     // Temporary hack
-    //     sourceDirector.fillSources();
-    //
-    //     ticksSinceFilledDirector = 0;
-    // }
+    let activeSpawn = Game.spawns['Spawn1'];
 
     for(var role in roles) {
         let roleDetails = roles[role];
@@ -41,13 +52,20 @@ module.exports.loop = function () {
         creeps.forEach(creep => roleDetails.run(creep));
         
         if(creeps.length < desiredNumber) {
-            Game.spawns['Spawn1'].spawnCreep(
-                roleDetails.definition,
-                role + Game.time,
-                { memory: { role } }
-            )
+            let body = constructWithEnergyBudget(
+                    roleDetails,
+                    activeSpawn.room.energyAvailable
+                );
+            let name = role + Game.time;
+            let memory = { memory: { role } };
 
-            break;
+            console.log("Attempting to build a creep: ", body, name);
+
+            activeSpawn.spawnCreep(
+                body,
+                name,
+                memory
+            );
         }
 
         if(creeps.length > desiredNumber) {

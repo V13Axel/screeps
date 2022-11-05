@@ -1,6 +1,20 @@
 var roleHarvester = {
     desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
+    partsBudgets: {
+        [WORK]: {
+            costModifier: .3,
+            cost: 100
+        },
+        [CARRY]: {
+            costModifier: .40,
+            cost: 50
+        },
+        [MOVE]: {
+            costModifier: .30,
+            cost: 50
+        },
+    },
 
     /** @param {Creep} creep **/
     run: function(creep) {
@@ -25,12 +39,31 @@ var roleHarvester = {
                 if(attempt == ERR_NOT_IN_RANGE) {
                     creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
                 } else {
-                    console.log(attempt);
+                    // console.log(attempt);
                 }
             } else {
                 creep.moveTo(Game.spawns['Spawn1']);
             }
         }
+    },
+
+    constructWithEnergyBudget: function(budget) {
+        let parts = [];
+        
+        for (var partName in this.partsBudgets) {
+            let details = this.partsBudgets[partName];
+            let count = Math.floor((details.costModifier * budget) / details.cost);
+
+            for(let i = 0; i < count; i++) {
+                parts.push(partName);
+            }
+        }
+
+        if(parts.length < 3) {
+            return this.definition;
+        }
+
+        return parts; 
     },
 
     harvest: function(creep) {
