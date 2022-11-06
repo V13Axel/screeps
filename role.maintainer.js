@@ -1,5 +1,5 @@
 var roleMaintainer = {
-    desiredNumber: 1,
+    desiredNumber: 3,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
@@ -18,6 +18,7 @@ var roleMaintainer = {
 
     /** @param {Creep} creep **/
     run: function(creep) {
+        creep.say(creep.memory.action);
         switch(creep.memory.action) {
             case 'cleanup':
                 this.cleanup(creep);
@@ -118,7 +119,9 @@ var roleMaintainer = {
                 creep.memory.action = 'harvest';
                 break;
             case OK:
-                creep.memory.fixing = null;
+                if(targetStructure.hits > targetStructure.hitsMax * 0.95) {
+                    creep.memory.fixing = null;
+                }
                 break;
             default:
                 console.log(creep.name + "Repair attempt returned code: " + attempt);

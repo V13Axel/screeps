@@ -1,5 +1,5 @@
 var roleHarvester = {
-    desiredNumber: 3,
+    desiredNumber: 4,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {

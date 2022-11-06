@@ -52,7 +52,8 @@ module.exports.loop = function () {
 
         creeps.forEach(creep => roleDetails.run(creep));
         
-        if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable > 300) {
+        console.log(creeps.length, desiredNumber, activeSpawn.room.energyAvailable );
+        if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable >= 300) {
             let body = constructWithEnergyBudget(
                     roleDetails,
                     (activeSpawn.room.energyAvailable * .8)

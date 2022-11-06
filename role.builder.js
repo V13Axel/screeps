@@ -1,5 +1,5 @@
 var roleBuilder = {
-    desiredNumber: 4,
+    desiredNumber: 0,
     definition: [WORK, MOVE, CARRY],
     partsBudgets: {
         [WORK]: {
