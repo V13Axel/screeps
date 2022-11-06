@@ -30,8 +30,8 @@ var roleMaintainer = {
             case 'harvest':
                 this.harvest(creep);
                 break;
-            case 'waiting':
-                this.wait(creep);
+            case 'choosing':
+                this.choose(creep);
                 break;
             default:
                 creep.memory.action = 'cleanup';
@@ -42,7 +42,7 @@ var roleMaintainer = {
     cleanup: function(creep) {
         let dropped = creep.room.find(FIND_DROPPED_RESOURCES);
         if(!dropped.length) {
-            creep.memory.action = 'waiting';
+            creep.memory.action = 'choosing';
             return;
         }
 
@@ -53,7 +53,7 @@ var roleMaintainer = {
 
     harvest: function(creep) {
         if(creep.store.getFreeCapacity() == 0) {
-            creep.memory.action = 'waiting';
+            creep.memory.action = 'choosing';
             return;
         }
 
@@ -82,7 +82,7 @@ var roleMaintainer = {
         }
     },
 
-    wait: function(creep) {
+    choose: function(creep) {
         let spawns = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return structure.structureType == STRUCTURE_SPAWN
@@ -95,7 +95,7 @@ var roleMaintainer = {
                 return (structure.structureType == STRUCTURE_ROAD ||
                         structure.structureType == STRUCTURE_WALL ||
                         structure.structureType == STRUCTURE_RAMPART) && 
-                        (structure.hits < structure.hitsMax * 0.95);
+                        (structure.hits < structure.hitsMax * 0.75);
             }
         });
 
@@ -117,7 +117,7 @@ var roleMaintainer = {
 
         switch (attempt) {
             case ERR_INVALID_TARGET:
-                creep.memory.action = 'waiting';
+                creep.memory.action = 'choosing';
                 break;
             case ERR_NOT_IN_RANGE:
                 creep.moveTo(targetStructure);
