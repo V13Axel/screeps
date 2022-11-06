@@ -1,5 +1,5 @@
 var roleUpgrader = {
-    desiredNumber: 2,
+    desiredNumber: 3,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
