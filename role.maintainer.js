@@ -18,8 +18,6 @@ var roleMaintainer = {
 
     /** @param {Creep} creep **/
     run: function(creep) {
-        creep.say(creep.memory.action);
-
         switch(creep.memory.action) {
             case 'cleanup':
                 this.cleanup(creep);
@@ -61,8 +59,6 @@ var roleMaintainer = {
             let sources = creep.room.find(FIND_SOURCES);
 
             creep.memory.source = sources[Math.floor(Math.random()*sources.length)].id;
-
-            console.log(creep.memory.source);
         }
 
 
@@ -73,11 +69,10 @@ var roleMaintainer = {
                 creep.moveTo(target, {visualizePathStyle: {stroke: '#ffaa00'}});
                 break;
             case ERR_INVALID_TARGET:
-                console.log("Invalid target", attempt, JSON.stringify(target));
                 creep.memory.source = null;
                 break;
             default:
-                console.log(attempt);
+                console.log("Got result" + attempt);
                 
         }
     },
@@ -99,15 +94,12 @@ var roleMaintainer = {
             }
         });
 
-        console.log(needingRepair.length);
-
         if(needingRepair.length < 1) {
             creep.memory.action = 'harvest';
             return;
         }
 
         creep.memory.action = 'fixing';
-        console.log(needingRepair[0])
         creep.memory.fixing = needingRepair[0].id;
     },
 
