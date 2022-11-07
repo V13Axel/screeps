@@ -1,4 +1,4 @@
-var roleMaintainer = {
+var roleScout = {
     desiredNumber: 3,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
@@ -18,21 +18,16 @@ var roleMaintainer = {
 
     /** @param {Creep} creep **/
     run: function(creep) {
-        if(Memory.creepsAnnounce) {
-            creep.say(creep.memory.action);
-        }
+        creep.say(creep.memory.action);
         switch(creep.memory.action) {
-            case 'cleanup':
-                this.cleanup(creep);
-                break;
             case 'fixing':
                 this.fix(creep);
                 break;
             case 'harvest':
                 this.harvest(creep);
                 break;
-            case 'waiting':
-                this.wait(creep);
+            case 'choosing':
+                this.choose(creep);
                 break;
             default:
                 creep.memory.action = 'cleanup';
@@ -40,21 +35,9 @@ var roleMaintainer = {
 
     },
 
-    cleanup: function(creep) {
-        let dropped = creep.room.find(FIND_DROPPED_RESOURCES);
-        if(!dropped.length) {
-            creep.memory.action = 'waiting';
-            return;
-        }
-
-        if(creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(dropped[0]);
-        }
-    },
-
     harvest: function(creep) {
         if(creep.store.getFreeCapacity() == 0) {
-            creep.memory.action = 'waiting';
+            creep.memory.action = 'choosing';
             return;
         }
 
@@ -80,7 +63,7 @@ var roleMaintainer = {
         }
     },
 
-    wait: function(creep) {
+    choose: function(creep) {
         let spawns = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return structure.structureType == STRUCTURE_SPAWN
@@ -97,12 +80,8 @@ var roleMaintainer = {
             }
         });
 
-        if(needingRepair.length < 1 && creep.store.getFreeCapacity() > 0) {
-            creep.memory.action = 'harvest';
-            return;
-        }
-
         if(needingRepair.length < 1) {
+            creep.memory.action = 'harvest';
             return;
         }
 
@@ -116,7 +95,7 @@ var roleMaintainer = {
 
         switch (attempt) {
             case ERR_INVALID_TARGET:
-                creep.memory.action = 'waiting';
+                creep.memory.action = 'choosing';
                 break;
             case ERR_NOT_IN_RANGE:
                 creep.moveTo(targetStructure);
@@ -138,4 +117,4 @@ var roleMaintainer = {
     }
 };
 
-module.exports = roleMaintainer;
+module.exports = roleScout;

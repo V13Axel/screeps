@@ -43,35 +43,41 @@ function constructWithEnergyBudget(role, budget) {
 
 module.exports.loop = function () {
     cleanupDeadCreeps();
-    let activeSpawn = Game.spawns['Spawn1'];
+    for (var [id, room] of Object.entries(Game.rooms)) {
+        // console.log("Processing room " + id);
+        let activeSpawn = room.find(FIND_MY_SPAWNS)[0];
+        let roomCreeps = room.find(FIND_MY_CREEPS);
 
-    for(var role in roles) {
-        let roleDetails = roles[role];
-        let desiredNumber = roleDetails.desiredNumber;
-        let creeps = Object.values(Game.creeps).filter(creep => creep.memory.role == role);
+        for(var role in roles) {
+            let roleDetails = roles[role];
+            let desiredNumber = roleDetails.desiredNumber;
+            let creeps = Object.values(roomCreeps).filter(creep => creep.memory.role == role);
 
-        creeps.forEach(creep => roleDetails.run(creep));
-        
-        console.log(creeps.length, desiredNumber, activeSpawn.room.energyAvailable );
-        if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable >= 300) {
-            let body = constructWithEnergyBudget(
-                    roleDetails,
-                    (activeSpawn.room.energyAvailable * .8)
-                );
-            let name = role + Game.time;
-            let memory = { memory: { role } };
+            creeps.forEach(creep => roleDetails.run(creep));
+            
+            if(activeSpawn) {
+                console.log(creeps.length, desiredNumber, activeSpawn.room.energyAvailable );
+                if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable >= 300) {
+                    let body = constructWithEnergyBudget(
+                            roleDetails,
+                            Math.max(activeSpawn.room.energyAvailable * .8, 300)
+                        );
+                    let name = role + Game.time;
+                    let memory = { memory: { role } };
 
-            console.log("Attempting to build a creep: ", body, name);
+                    console.log("Attempting to build a creep: ", body, name);
 
-            activeSpawn.spawnCreep(
-                body,
-                name,
-                memory
-            );
-        }
+                    activeSpawn.spawnCreep(
+                        body,
+                        name,
+                        memory
+                    );
+                }
 
-        if(creeps.length > desiredNumber) {
-            creeps[0].suicide();
+                if(creeps.length > desiredNumber) {
+                    creeps[0].suicide();
+                }
+            }
         }
     }
 }
