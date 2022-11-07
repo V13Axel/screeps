@@ -16,6 +16,10 @@ var roleBuilder = {
         },
     },
 
+    shouldSpawn(room) {
+	return room.find(FIND_CONSTRUCTION_SITES).length > 0;
+    },
+
     /** @param {Creep} creep **/
     run: function(creep) {
 	if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {

@@ -31,6 +31,11 @@ var roleHarvester = {
         }
     },
 
+    // **always** spawn harvesters.
+    shouldSpawn: function(room) {
+        return true;
+    },
+
     deliver: function(creep) {
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {

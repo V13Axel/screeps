@@ -1,13 +1,15 @@
-var roleHarvester = require('role.harvester');
-var roleUpgrader = require('role.upgrader');
-var roleBuilder = require('role.builder');
+const roleHarvester = require('role.harvester');
+const roleUpgrader = require('role.upgrader');
+const roleBuilder = require('role.builder');
 const roleMaintainer = require('./role.maintainer');
+const roleScout = require('./role.scout');
 
 var roles = {
     'harvester': roleHarvester,
     'upgrader': roleUpgrader,
     'builder': roleBuilder,
     'maintainer': roleMaintainer,
+    'scout': roleScout,
 }
 
 
@@ -50,13 +52,12 @@ module.exports.loop = function () {
 
         for(var role in roles) {
             let roleDetails = roles[role];
-            let desiredNumber = roleDetails.desiredNumber;
+            let desiredNumber = roleDetails.shouldSpawn(room) ? roleDetails.desiredNumber : 0;
             let creeps = Object.values(roomCreeps).filter(creep => creep.memory.role == role);
 
             creeps.forEach(creep => roleDetails.run(creep));
             
             if(activeSpawn) {
-                console.log(creeps.length, desiredNumber, activeSpawn.room.energyAvailable );
                 if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable >= 300) {
                     let body = constructWithEnergyBudget(
                             roleDetails,
@@ -74,7 +75,7 @@ module.exports.loop = function () {
                     );
                 }
 
-                if(creeps.length > desiredNumber) {
+                if(creeps.length > 0 && creeps.length > desiredNumber) {
                     creeps[0].suicide();
                 }
             }

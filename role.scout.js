@@ -1,9 +1,9 @@
 var roleScout = {
-    desiredNumber: 3,
+    desiredNumber: 1,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
-            costModifier: .5,
+            costModifier: (1/3),
             cost: 100
         },
         [CARRY]: {
@@ -16,104 +16,51 @@ var roleScout = {
         },
     },
 
+    shouldSpawn: function(room) {
+        if(Game.flags['Scoutflag']) {
+            return true;
+        }
+
+        return false;
+    },
+
     /** @param {Creep} creep **/
     run: function(creep) {
         creep.say(creep.memory.action);
         switch(creep.memory.action) {
-            case 'fixing':
-                this.fix(creep);
+            case 'returning':
+                this.goHome(creep);
                 break;
-            case 'harvest':
-                this.harvest(creep);
-                break;
-            case 'choosing':
-                this.choose(creep);
+            case 'scouting':
+                this.scout(creep);
                 break;
             default:
-                creep.memory.action = 'cleanup';
+                creep.memory.action = 'returning';
         }
-
     },
 
-    harvest: function(creep) {
-        if(creep.store.getFreeCapacity() == 0) {
-            creep.memory.action = 'choosing';
+    goHome: function(creep) {
+        let activeSpawn = Game.spawns['Spawn1'];
+        if(creep.pos.isNearTo(activeSpawn)) {
+            creep.memory.action = 'scouting';
             return;
         }
 
-        if(!creep.memory.source) {
-            let sources = creep.room.find(FIND_SOURCES);
-
-            creep.memory.source = sources[Math.floor(Math.random()*sources.length)].id;
-        }
-
-
-        let target = Game.getObjectById(creep.memory.source);
-        let attempt = creep.harvest(target); 
-        switch (attempt) {
-            case ERR_NOT_IN_RANGE:
-                creep.moveTo(target, {visualizePathStyle: {stroke: '#ffaa00'}});
-                break;
-            case ERR_INVALID_TARGET:
-                creep.memory.source = null;
-                break;
-            default:
-                console.log("Got result" + attempt);
-                
-        }
+        creep.moveTo(activeSpawn);
     },
 
-    choose: function(creep) {
-        let spawns = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return structure.structureType == STRUCTURE_SPAWN
-            }
-        });
-        creep.moveTo(spawns[0]);
+    scout: function(creep) {
+        let targetFlag = Game.flags['Scoutflag'];
+        let activeSpawn = Game.spawns['Spawn1'];
 
-        var needingRepair = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.structureType == STRUCTURE_ROAD ||
-                        structure.structureType == STRUCTURE_WALL ||
-                        structure.structureType == STRUCTURE_RAMPART) && 
-                        (structure.hits < structure.hitsMax * 0.75);
-            }
-        });
-
-        if(needingRepair.length < 1) {
-            creep.memory.action = 'harvest';
+        if(!targetFlag && !creep.pos.isNearTo(activeSpawn)) {
+            creep.memory.action = 'returning';
             return;
         }
 
-        creep.memory.action = 'fixing';
-        creep.memory.fixing = needingRepair[0].id;
-    },
-
-    fix: function(creep) {
-        let targetStructure = Game.getObjectById(creep.memory.fixing);
-        let attempt = creep.repair(targetStructure);
-
-        switch (attempt) {
-            case ERR_INVALID_TARGET:
-                creep.memory.action = 'choosing';
-                break;
-            case ERR_NOT_IN_RANGE:
-                creep.moveTo(targetStructure);
-                break;
-            case ERR_NOT_ENOUGH_RESOURCES:
-                creep.memory.action = 'harvest';
-                break;
-            case OK:
-                if(targetStructure.hits > targetStructure.hitsMax * 0.95) {
-                    creep.memory.fixing = null;
-                }
-                break;
-            default:
-                console.log(creep.name + "Repair attempt returned code: " + attempt);
-                break;
+        if(!creep.pos.isNearTo(targetFlag)) {
+            creep.moveTo(targetFlag);
         }
-
-        return;
     }
 };
 

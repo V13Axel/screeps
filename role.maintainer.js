@@ -19,7 +19,7 @@ var roleMaintainer = {
     /** @param {Creep} creep **/
     run: function(creep) {
         if(Memory.creepsAnnounce) {
-            creep.say(creep.memory.action);
+            this.announce(creep, creep.memory.action);
         }
         switch(creep.memory.action) {
             case 'cleanup':
@@ -40,9 +40,17 @@ var roleMaintainer = {
 
     },
 
+    // For now, always spawn maintainers.
+    // Future, though? Maybe some kind of smart approach that
+    // Only spawns when something in the room is <50% health?
+    shouldSpawn: function(room) {
+        return true;
+    },
+
     cleanup: function(creep) {
         let dropped = creep.room.find(FIND_DROPPED_RESOURCES);
         if(!dropped.length) {
+            this.announce(creep, 'wait');
             creep.memory.action = 'waiting';
             return;
         }
@@ -54,6 +62,7 @@ var roleMaintainer = {
 
     harvest: function(creep) {
         if(creep.store.getFreeCapacity() == 0) {
+            this.announce(creep, 'wait');
             creep.memory.action = 'waiting';
             return;
         }
@@ -98,6 +107,7 @@ var roleMaintainer = {
         });
 
         if(needingRepair.length < 1 && creep.store.getFreeCapacity() > 0) {
+            this.announce(creep, 'harvesting');
             creep.memory.action = 'harvest';
             return;
         }
@@ -106,6 +116,7 @@ var roleMaintainer = {
             return;
         }
 
+        this.announce(creep, 'fixing');
         creep.memory.action = 'fixing';
         creep.memory.fixing = needingRepair[0].id;
     },
@@ -116,12 +127,14 @@ var roleMaintainer = {
 
         switch (attempt) {
             case ERR_INVALID_TARGET:
+                this.announce(creep, 'waiting');
                 creep.memory.action = 'waiting';
                 break;
             case ERR_NOT_IN_RANGE:
                 creep.moveTo(targetStructure);
                 break;
             case ERR_NOT_ENOUGH_RESOURCES:
+                this.announce(creep, 'harvesting');
                 creep.memory.action = 'harvest';
                 break;
             case OK:
@@ -135,6 +148,12 @@ var roleMaintainer = {
         }
 
         return;
+    },
+
+    announce: function(creep, string) {
+        if(Memory.creepsAnnounce) {
+            creep.say(string);
+        }
     }
 };
 

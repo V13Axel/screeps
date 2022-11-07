@@ -40,6 +40,11 @@ var roleUpgrader = {
             }
         }
     },
+
+    // We always need upgraders
+    shouldSpawn: function(room) {
+        return true;
+    }
 };
 
 module.exports = roleUpgrader;
