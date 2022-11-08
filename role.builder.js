@@ -50,7 +50,7 @@ var roleBuilder = {
 	    let structureSources = creep.room.find(FIND_MY_STRUCTURES).filter(structure => {
 		return (structure.structureType == STRUCTURE_STORAGE ||
 			structure.structureType == STRUCTURE_CONTAINER) &&
-			structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
+			structure.store.getUsedCapacity(RESOURCE_ENERGY) > 3000;
 	    });
 	    
 	    structureSources.sort((a, b) => {
