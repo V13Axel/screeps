@@ -47,15 +47,22 @@ var roleBuilder = {
 	    }
 	}
 	else {
-	    let structureSources = creep.room.find(FIND_MY_STRUCTURES).filter(structure => {
-		return (structure.structureType == STRUCTURE_STORAGE ||
-			structure.structureType == STRUCTURE_CONTAINER) &&
-			structure.store.getUsedCapacity(RESOURCE_ENERGY) > 3000;
+	    let structureSources = creep.room.find(FIND_STRUCTURES).filter(structure => {
+		switch(structure.structureType) {
+		    case STRUCTURE_STORAGE:
+			// console.log("Structure is storage", structure.store.getUsedCapacity(RESOURCE_ENERGY));
+			return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 3000;
+		    case STRUCTURE_CONTAINER:
+			// console.log("Structure is container", structure.store.getUsedCapacity(RESOURCE_ENERGY));
+			return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
+		    default:
+			return false;
+		}
 	    });
 	    
 	    structureSources.sort((a, b) => {
 		return this.structurePriority.indexOf(a.structureType) 
-		    - this.structurePriority.indexOf(b.structureType);
+		     - this.structurePriority.indexOf(b.structureType);
 	    });
 
 	    if (structureSources.length > 0) {

@@ -16,6 +16,14 @@ var roleHarvester = {
         },
     },
 
+    structurePriority: [
+        STRUCTURE_SPAWN,
+        STRUCTURE_EXTENSION,
+        STRUCTURE_TOWER,
+	STRUCTURE_STORAGE,
+	STRUCTURE_CONTAINER
+    ],
+
     /** @param {Creep} creep **/
     run: function(creep) {
         switch(creep.memory.action) {
@@ -46,6 +54,11 @@ var roleHarvester = {
                         structure.structureType == STRUCTURE_TOWER) && 
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
+        });
+
+        targets.sort((a, b) => {
+            return this.structurePriority.indexOf(a.structureType)
+                 - this.structurePriority.indexOf(b.structureType);
         });
 
         if(targets.length > 0) {
