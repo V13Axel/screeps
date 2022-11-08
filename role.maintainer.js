@@ -44,7 +44,7 @@ var roleMaintainer = {
     // Future, though? Maybe some kind of smart approach that
     // Only spawns when something in the room is <50% health?
     shouldSpawn: function(room) {
-        return true;
+        return room.find(FIND_MY_STRUCTURES).filter(structure => structure.hits < (structure.hitsMax / 2)).length > 4;
     },
 
     cleanup: function(creep) {
@@ -83,9 +83,6 @@ var roleMaintainer = {
             case ERR_INVALID_TARGET:
                 creep.memory.source = null;
                 break;
-            default:
-                console.log("Got result" + attempt);
-                
         }
     },
 

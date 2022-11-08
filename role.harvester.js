@@ -2,16 +2,16 @@ var roleHarvester = {
     desiredNumber: 4,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
+        [MOVE]: {
+            costModifier: .30,
+            cost: 50
+        },
         [WORK]: {
             costModifier: .3,
             cost: 100
         },
         [CARRY]: {
             costModifier: .40,
-            cost: 50
-        },
-        [MOVE]: {
-            costModifier: .30,
             cost: 50
         },
     },
@@ -32,7 +32,7 @@ var roleHarvester = {
     },
 
     // **always** spawn harvesters.
-    shouldSpawn: function(room) {
+    shouldSpawn: function(_) {
         return true;
     },
 
@@ -42,6 +42,7 @@ var roleHarvester = {
                 return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_SPAWN ||
                         structure.structureType == STRUCTURE_CONTAINER ||
+                        structure.structureType == STRUCTURE_STORAGE ||
                         structure.structureType == STRUCTURE_TOWER) && 
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }

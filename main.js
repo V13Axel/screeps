@@ -21,21 +21,34 @@ function cleanupDeadCreeps() {
             console.log('Freed memory of ' + name);
         }
     }
+
+    if(Object.keys(Game.creeps).length == 0) {
+        Game.notify("Creeps are dead! I repeat, creeps are DEAD");
+    }
 };
 
 function constructWithEnergyBudget(role, budget) {
     return role.definition;
-    let parts = [];
-    
-    for (var partName in role.partsBudgets) {
-        let details = role.partsBudgets[partName];
-        let count = Math.floor((details.costModifier * budget) / details.cost);
+    let parts = role.definition;
+    let budgetFits = {};
 
-        for(let i = 0; i < count; i++) {
-            parts.push(partName);
+    while(budgetFits.filter(item => item).length > 0) {
+        console.log(JSON.stringify(budgetFits));
+        for (var partName in role.partsBudgets) {
+            if(!partName in budgetFits) {
+                budgetFits[partName] = true;
+            }
+
+            let details = role.partsBudgets[partName];
+            if(total + details.cost < budget) {
+                parts.push(partName);
+                continue;
+            } 
+
+            budgetFits[partName] = false;
         }
     }
-
+    
     if(parts.length < 3) {
         return role.definition;
     }
@@ -43,42 +56,63 @@ function constructWithEnergyBudget(role, budget) {
     return parts; 
 };
 
-module.exports.loop = function () {
-    cleanupDeadCreeps();
-    for (var [id, room] of Object.entries(Game.rooms)) {
-        // console.log("Processing room " + id);
-        let activeSpawn = room.find(FIND_MY_SPAWNS)[0];
-        let roomCreeps = room.find(FIND_MY_CREEPS);
+function spawnCreepsIfNeeded(activeSpawn, role, roleDetails, roomCreeps, room) {
+    let desiredNumber = roleDetails.shouldSpawn(room) 
+        ? roleDetails.desiredNumber 
+        : 0;
 
-        for(var role in roles) {
-            let roleDetails = roles[role];
-            let desiredNumber = roleDetails.shouldSpawn(room) ? roleDetails.desiredNumber : 0;
-            let creeps = Object.values(roomCreeps).filter(creep => creep.memory.role == role);
+    let creeps = Object.values(roomCreeps).filter(creep => creep.memory.role == role);
+    let startedSpawning = false;
 
-            creeps.forEach(creep => roleDetails.run(creep));
-            
-            if(activeSpawn) {
-                if(creeps.length < desiredNumber && activeSpawn.room.energyAvailable >= 300) {
-                    let body = constructWithEnergyBudget(
-                            roleDetails,
-                            Math.max(activeSpawn.room.energyAvailable * .8, 300)
-                        );
-                    let name = role + Game.time;
-                    let memory = { memory: { role } };
+    creeps.forEach(creep => roleDetails.run(creep));
 
-                    console.log("Attempting to build a creep: ", body, name);
+    if(
+        !activeSpawn.spawning &&
+        !startedSpawning &&
+        creeps.length < desiredNumber &&
+        activeSpawn.room.energyAvailable >= 300
+    ) {
+        let body = constructWithEnergyBudget(
+            roleDetails,
+            Math.max(activeSpawn.room.energyAvailable * .8, 300)
+        );
+        let name = role + Game.time;
+        let memory = { memory: { role } };
 
-                    activeSpawn.spawnCreep(
-                        body,
-                        name,
-                        memory
-                    );
-                }
 
-                if(creeps.length > 0 && creeps.length > desiredNumber) {
-                    creeps[0].suicide();
-                }
-            }
+        startedSpawning = true;
+        activeSpawn.spawnCreep(
+            body,
+            name,
+            memory
+        );
+    } else if (activeSpawn.spawning) {
+        console.log("Attempting to build a creep: ", activeSpawn.spawning.name);
+    }
+
+    if(creeps.length > 0 && creeps.length > desiredNumber) {
+        creeps[0].suicide();
+    }
+};
+
+function roomLoop(room) {
+    // console.log("Processing room " + id);
+    let spawns = room.find(FIND_MY_SPAWNS);
+    let roomCreeps = room.find(FIND_MY_CREEPS);
+
+    for(var role in roles) {
+        let roleDetails = roles[role];
+
+        for (var spawn of spawns) {
+            spawnCreepsIfNeeded(spawn, role, roleDetails, roomCreeps, room);
         }
     }
+};
+
+module.exports.loop = function () {
+    for (var [id, room] of Object.entries(Game.rooms)) {
+        roomLoop(room);
+    }
+
+    cleanupDeadCreeps();
 }
