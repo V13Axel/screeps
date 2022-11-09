@@ -3,12 +3,14 @@ use std::collections::HashMap;
 
 use log::*;
 use screeps::{
-    find, game, prelude::*, Creep, ObjectId, Part, ResourceType, ReturnCode, RoomObjectProperties,
-    Source, StructureController, StructureObject,
+    find, game, prelude::*, Creep, Part, ResourceType, ReturnCode, RoomObjectProperties, StructureObject, memory,
 };
+use goal::CreepGoal;
 use wasm_bindgen::prelude::*;
 
 mod logging;
+mod role;
+mod goal;
 
 // add wasm_bindgen to any function you would like to expose for call from js
 #[wasm_bindgen]
@@ -19,15 +21,9 @@ pub fn setup() {
 // this is one way to persist data between ticks within Rust's memory, as opposed to
 // keeping state in memory on game objects - but will be lost on global resets!
 thread_local! {
-    static CREEP_TARGETS: RefCell<HashMap<String, CreepTarget>> = RefCell::new(HashMap::new());
+    static CREEP_TARGETS: RefCell<HashMap<String, CreepGoal>> = RefCell::new(HashMap::new());
 }
 
-// this enum will represent a creep's lock on a specific target object, storing a js reference to the object id so that we can grab a fresh reference to the object each successive tick, since screeps game objects become 'stale' and shouldn't be used beyond the tick they were fetched
-#[derive(Clone)]
-enum CreepTarget {
-    Upgrade(ObjectId<StructureController>),
-    Harvest(ObjectId<Source>),
-}
 
 // to use a reserved name as a function name, use `js_name`:
 #[wasm_bindgen(js_name = loop)]
@@ -76,10 +72,11 @@ pub fn game_loop() {
         }
     }
 
+
     info!("done! cpu: {}", game::cpu::get_used())
 }
 
-fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepTarget>) {
+fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepGoal>) {
     if creep.spawning() {
         return;
     }
@@ -90,7 +87,7 @@ fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepTarget>) {
     match target {
         Some(creep_target) => {
             let keep_target = match &creep_target {
-                CreepTarget::Upgrade(controller_id) => {
+                CreepGoal::Upgrade(controller_id) => {
                     if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
                         match controller_id.resolve() {
                             Some(controller) => {
@@ -111,7 +108,7 @@ fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepTarget>) {
                         false
                     }
                 }
-                CreepTarget::Harvest(source_id) => {
+                CreepGoal::Harvest(source_id) => {
                     if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
                         match source_id.resolve() {
                             Some(source) => {
@@ -146,12 +143,12 @@ fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepTarget>) {
             if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
                 for structure in room.find(find::STRUCTURES).iter() {
                     if let StructureObject::StructureController(controller) = structure {
-                        creep_targets.insert(name, CreepTarget::Upgrade(controller.id()));
+                        creep_targets.insert(name, CreepGoal::Upgrade(controller.id()));
                         break;
                     }
                 }
             } else if let Some(source) = room.find(find::SOURCES_ACTIVE).get(0) {
-                creep_targets.insert(name, CreepTarget::Harvest(source.id()));
+                creep_targets.insert(name, CreepGoal::Harvest(source.id()));
             }
         }
     }
