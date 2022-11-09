@@ -1,17 +1,17 @@
-var roleMaintainer = {
+var roleDefenseTech = {
     desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
-            costModifier: .5,
+            costModifier: .3,
             cost: 100
         },
         [CARRY]: {
-            costModifier: .25,
+            costModifier: .2,
             cost: 50
         },
         [MOVE]: {
-            costModifier: .25,
+            costModifier: .5,
             cost: 50
         },
     },
@@ -22,11 +22,8 @@ var roleMaintainer = {
             this.announce(creep, creep.memory.action);
         }
         switch(creep.memory.action) {
-            case 'cleanup':
-                this.cleanup(creep);
-                break;
-            case 'fixing':
-                this.fix(creep);
+            case 'refilling':
+                this.refill(creep);
                 break;
             case 'harvest':
                 this.harvest(creep);
@@ -35,7 +32,7 @@ var roleMaintainer = {
                 this.wait(creep);
                 break;
             default:
-                creep.memory.action = 'cleanup';
+                creep.memory.action = 'waiting';
         }
 
     },
@@ -44,21 +41,9 @@ var roleMaintainer = {
     // Future, though? Maybe some kind of smart approach that
     // Only spawns when something in the room is <50% health?
     shouldSpawn: function(room) {
-        return true;
-        return room.find(FIND_STRUCTURES).filter(structure => structure.hits < (structure.hitsMax / 2)).length;
-    },
-
-    cleanup: function(creep) {
-        let dropped = creep.room.find(FIND_DROPPED_RESOURCES);
-        if(!dropped.length) {
-            this.announce(creep, 'wait');
-            creep.memory.action = 'waiting';
-            return;
-        }
-
-        if(creep.pickup(dropped[0]) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(dropped[0]);
-        }
+        return room.find(FIND_STRUCTURES, {
+            filter: (structure) => structure.structureType == STRUCTURE_TOWER
+        }).length;
     },
 
     harvest: function(creep) {
@@ -88,40 +73,38 @@ var roleMaintainer = {
     },
 
     wait: function(creep) {
-        let spawns = creep.room.find(FIND_STRUCTURES, {
+        let towers = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return structure.structureType == STRUCTURE_SPAWN
+                return structure.structureType == STRUCTURE_TOWER
+                    && structure.store.getFreeCapacity() > 200;
             }
         });
-        creep.moveTo(spawns[0]);
+        creep.moveTo(towers[0]);
 
-        var needingRepair = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (structure.structureType == STRUCTURE_ROAD ||
-                        structure.structureType == STRUCTURE_WALL ||
-                        structure.structureType == STRUCTURE_RAMPART) && 
-                        (structure.hits < structure.hitsMax * 0.75);
-            }
-        });
-
-        if(needingRepair.length < 1 && creep.store.getFreeCapacity() > 0) {
+        if(towers.length < 1 && creep.store.getFreeCapacity() > 0) {
             this.announce(creep, 'harvesting');
             creep.memory.action = 'harvest';
             return;
         }
 
-        if(needingRepair.length < 1) {
+        if(towers.length < 1 && creep.store.getFreeCapacity() > 0) {
+            this.announce(creep, 'harvesting');
+            creep.memory.action = 'harvest';
             return;
         }
 
-        this.announce(creep, 'fixing');
-        creep.memory.action = 'fixing';
-        creep.memory.fixing = needingRepair[0].id;
+        if(towers.length < 1) {
+            return;
+        }
+
+        this.announce(creep, 'refilling');
+        creep.memory.action = 'refilling';
+        creep.memory.refilling = towers[0].id;
     },
 
-    fix: function(creep) {
-        let targetStructure = Game.getObjectById(creep.memory.fixing);
-        let attempt = creep.repair(targetStructure);
+    refill: function(creep) {
+        let targetStructure = Game.getObjectById(creep.memory.refilling);
+        let attempt = creep.deposit(targetStructure);
 
         switch (attempt) {
             case ERR_INVALID_TARGET:
@@ -137,7 +120,7 @@ var roleMaintainer = {
                 break;
             case OK:
                 if(targetStructure.hits > targetStructure.hitsMax * 0.95) {
-                    creep.memory.fixing = null;
+                    creep.memory.refilling = null;
                 }
                 break;
             default:
@@ -155,4 +138,4 @@ var roleMaintainer = {
     }
 };
 
-module.exports = roleMaintainer;
+module.exports = roleDefenseTech;

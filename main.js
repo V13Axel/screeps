@@ -3,6 +3,10 @@ const roleUpgrader = require('role.upgrader');
 const roleBuilder = require('role.builder');
 const roleMaintainer = require('./role.maintainer');
 const roleScout = require('./role.scout');
+const roleDefenseTech = require('./role.defenseTech');
+
+const constructionManager = require('./manager.construction');
+const towerManager = require('./building.tower');
 
 var roles = {
     'harvester': roleHarvester,
@@ -10,6 +14,7 @@ var roles = {
     'builder': roleBuilder,
     'maintainer': roleMaintainer,
     'scout': roleScout,
+    'defenseTech': roleDefenseTech,
 }
 
 
@@ -32,7 +37,7 @@ function constructWithEnergyBudget(role, budget) {
     let parts = role.definition;
     let budgetFits = {};
 
-    while(budgetFits.filter(item => item).length > 0) {
+    while(Object.entries(budgetFits).filter(item => item).length > 0) {
         console.log(JSON.stringify(budgetFits));
         for (var partName in role.partsBudgets) {
             if(!partName in budgetFits) {
@@ -48,6 +53,8 @@ function constructWithEnergyBudget(role, budget) {
             budgetFits[partName] = false;
         }
     }
+
+    console.log(parts);
     
     if(parts.length < 3) {
         return role.definition;
@@ -96,8 +103,9 @@ function spawnCreepsIfNeeded(activeSpawn, role, roleDetails, roomCreeps, room) {
 };
 
 function roomLoop(room) {
-    constructRoads(room);
-    // console.log("Processing room " + id);
+    constructionManager.constructRoads(room);
+    towerManager.run(room);
+
     let spawns = room.find(FIND_MY_SPAWNS);
     let roomCreeps = room.find(FIND_MY_CREEPS);
 
@@ -110,49 +118,6 @@ function roomLoop(room) {
     }
 };
 
-function constructRoads(room) {
-    if(Game.flags[room.name + 'RoadStartFlag'] && Game.flags[room.name + 'RoadEndFlag']) {
-        let path = room.findPath(
-            Game.flags[room.name + 'RoadStartFlag'].pos,
-            Game.flags[room.name + 'RoadEndFlag'].pos,
-            {
-                ignoreCreeps: true,
-                ignoreRoads: true,
-            }
-        )
-        createRoadConstructionSitesAlongPath(room, path);
-
-        Game.flags[room.name + 'RoadStartFlag'].remove();
-        Game.flags[room.name + 'RoadEndFlag'].remove();
-        return;
-    }
-
-    if(room.memory.hasRoads) {
-        return;
-    }
-
-
-    let spawn = room.find(FIND_MY_SPAWNS)[0];
-    room.createFlag(
-        spawn.pos,
-        room.name + 'RoadStartFlag'
-    );
-    room.createFlag(
-        room.controller.pos,
-        room.name + 'RoadEndFlag'
-    );
-
-    room.memory.hasRoads = true;
-}
-
-function createRoadConstructionSitesAlongPath(room, path) {
-    path.forEach(pos => {
-        // room.visual.circle(pos.x, pos.y);
-        room.getPositionAt(pos.x, pos.y).createConstructionSite(
-            STRUCTURE_ROAD
-        );
-    });
-}
 
 module.exports.loop = function () {
     

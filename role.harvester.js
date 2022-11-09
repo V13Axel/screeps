@@ -3,15 +3,15 @@ var roleHarvester = {
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [MOVE]: {
-            costModifier: .30,
+            costModifier: .3,
             cost: 50
         },
         [WORK]: {
-            costModifier: .3,
+            costModifier: .2,
             cost: 100
         },
         [CARRY]: {
-            costModifier: .40,
+            costModifier: .5,
             cost: 50
         },
     },
