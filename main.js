@@ -96,6 +96,7 @@ function spawnCreepsIfNeeded(activeSpawn, role, roleDetails, roomCreeps, room) {
 };
 
 function roomLoop(room) {
+    constructRoads(room);
     // console.log("Processing room " + id);
     let spawns = room.find(FIND_MY_SPAWNS);
     let roomCreeps = room.find(FIND_MY_CREEPS);
@@ -109,7 +110,53 @@ function roomLoop(room) {
     }
 };
 
+function constructRoads(room) {
+    if(Game.flags[room.name + 'RoadStartFlag'] && Game.flags[room.name + 'RoadEndFlag']) {
+        let path = room.findPath(
+            Game.flags[room.name + 'RoadStartFlag'].pos,
+            Game.flags[room.name + 'RoadEndFlag'].pos,
+            {
+                ignoreCreeps: true,
+                ignoreRoads: true,
+            }
+        )
+        createRoadConstructionSitesAlongPath(room, path);
+
+        Game.flags[room.name + 'RoadStartFlag'].remove();
+        Game.flags[room.name + 'RoadEndFlag'].remove();
+        return;
+    }
+
+    if(room.memory.hasRoads) {
+        return;
+    }
+
+
+    let spawn = room.find(FIND_MY_SPAWNS)[0];
+    room.createFlag(
+        spawn.pos,
+        room.name + 'RoadStartFlag'
+    );
+    room.createFlag(
+        room.controller.pos,
+        room.name + 'RoadEndFlag'
+    );
+
+    room.memory.hasRoads = true;
+}
+
+function createRoadConstructionSitesAlongPath(room, path) {
+    path.forEach(pos => {
+        // room.visual.circle(pos.x, pos.y);
+        room.getPositionAt(pos.x, pos.y).createConstructionSite(
+            STRUCTURE_ROAD
+        );
+    });
+}
+
 module.exports.loop = function () {
+    
+
     for (var [id, room] of Object.entries(Game.rooms)) {
         roomLoop(room);
     }
