@@ -1,6 +1,10 @@
 module.exports = {
     spawnGivenBudget(role, budget) {
-        let parts = role.definition;
+        if(role.name != 'Maintainer') {
+            return;
+        }
+        console.log(role.name);
+        let parts = _.clone(role.definition);
         let total = 0;
         let budgetFits = {};
 
@@ -16,7 +20,7 @@ module.exports = {
         while(Object.entries(budgetFits).filter(item => item[1]).length > 0 && totalLoops < 5) {
             console.log(JSON.stringify(budgetFits));
             for (var [partName, definition] of Object.entries(role.partsBudgets)) {
-                if(total + definition.cost <= budget) {
+                if(total + definition.cost <= budget * definition.costModifier) {
                     total += definition.cost;
                     parts.push(partName);
                     continue;
@@ -26,6 +30,8 @@ module.exports = {
             }
             totalLoops++;
         }
+
+        parts.sort();
 
         console.log(parts);
 

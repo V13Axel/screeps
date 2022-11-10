@@ -1,4 +1,5 @@
 var roleScout = {
+    name: 'DefenseTech',
     desiredNumber: 1,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {

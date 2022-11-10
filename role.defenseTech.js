@@ -1,4 +1,5 @@
 var roleDefenseTech = {
+    name: 'DefenseTech',
     desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {

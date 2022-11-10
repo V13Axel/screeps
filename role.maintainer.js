@@ -1,11 +1,10 @@
-let roleHarvester = require('./role.harvester');
-
 var roleMaintainer = {
+    name: 'Maintainer',
     desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
-            costModifier: .5,
+            costModifier: .2,
             cost: 100
         },
         [CARRY]: {
@@ -13,7 +12,7 @@ var roleMaintainer = {
             cost: 50
         },
         [MOVE]: {
-            costModifier: .25,
+            costModifier: .45,
             cost: 50
         },
     },
@@ -213,21 +212,21 @@ var roleMaintainer = {
         }
 
         if(this._refill_extensions(creep)) {
-            console.log("Refilling extension");
+            // console.log("Refilling extension");
             return;
         }
 
         if(this._refill_towers(creep)) {
-            console.log("Refilling towers");
+            // console.log("Refilling towers");
             return;
         }
 
         if(this._repair_structures(creep)) {
-            console.log("Repairing structures");
+            // console.log("Repairing structures");
             return;
         }
 
-        console.log("Idle time");
+        // console.log("Idle time");
         this._idle(creep);
     },
 

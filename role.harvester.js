@@ -1,4 +1,5 @@
 var roleHarvester = {
+    name: 'Harvester',
     desiredNumber: 4,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
