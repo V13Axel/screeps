@@ -53,6 +53,37 @@ var roleDefenseTech = {
             return;
         }
 
+        let structureSources = creep.room.find(FIND_STRUCTURES).filter(structure => {
+            switch(structure.structureType) {
+                case STRUCTURE_STORAGE:
+                    // console.log("Structure is storage", structure.store.getUsedCapacity(RESOURCE_ENERGY));
+                    return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 3000;
+                case STRUCTURE_CONTAINER:
+                    // console.log("Structure is container", structure.store.getUsedCapacity(RESOURCE_ENERGY));
+                    return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
+                default:
+                return false;
+            }
+        });
+
+        structureSources.sort((a, b) => {
+            return this.structurePriority.indexOf(a.structureType) 
+                - this.structurePriority.indexOf(b.structureType);
+        });
+
+        if (structureSources.length > 0) {
+            let result = creep.withdraw(structureSources[0], RESOURCE_ENERGY);
+        switch (result) {
+                case ERR_NOT_IN_RANGE:
+                creep.moveTo(structureSources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+                break;
+                default:
+                console.log(result);
+            }
+
+            return;
+        }
+
         if(!creep.memory.source) {
             let sources = creep.room.find(FIND_SOURCES);
 
@@ -75,8 +106,7 @@ var roleDefenseTech = {
     wait: function(creep) {
         let towers = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return structure.structureType == STRUCTURE_TOWER
-                    && structure.store.getFreeCapacity() > 200;
+                return structure.structureType == STRUCTURE_TOWER;
             }
         });
         creep.moveTo(towers[0]);
@@ -104,7 +134,7 @@ var roleDefenseTech = {
 
     refill: function(creep) {
         let targetStructure = Game.getObjectById(creep.memory.refilling);
-        let attempt = creep.deposit(targetStructure);
+        let attempt = creep.transfer(targetStructure, RESOURCE_ENERGY);
 
         switch (attempt) {
             case ERR_INVALID_TARGET:
@@ -118,13 +148,17 @@ var roleDefenseTech = {
                 this.announce(creep, 'harvesting');
                 creep.memory.action = 'harvest';
                 break;
+            case ERR_FULL:
+                this.announce(creep, 'waiting');
+                creep.memory.action = 'waiting';
+                break;
             case OK:
                 if(targetStructure.hits > targetStructure.hitsMax * 0.95) {
                     creep.memory.refilling = null;
                 }
                 break;
             default:
-                console.log(creep.name + "Repair attempt returned code: " + attempt);
+                console.log(creep.name + "Fill attempt returned code: " + attempt);
                 break;
         }
 
