@@ -70,11 +70,9 @@ var roleMaintainer = {
                 creep.moveTo(target);
                 break;
             case ERR_INVALID_TARGET:
-                creep.memory.target = null;
-                creep.memory.action = 'wait';
-                break;
             case ERR_FULL:
                 creep.memory.target = null;
+                creep.memory.action = 'wait';
                 break;
             case OK:
                 break;
@@ -146,6 +144,8 @@ var roleMaintainer = {
             this.announce(creep, 'refilling');
             creep.memory.action = 'refill';
             creep.memory.target = extensions[0].id;
+
+            console.log(creep.name, "refilling");
 
             return true;
         }

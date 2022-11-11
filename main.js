@@ -74,14 +74,14 @@ function roomLoop(room) {
                 let memory = { memory: { role } };
 
                 startedSpawning = true;
+
                 let result = activeSpawn.spawnCreep(
                     body,
                     name,
                     memory
                 );
-            } else if (activeSpawn.spawning) {
-                console.log("Attempting to build a creep: ", activeSpawn.spawning.name);
-            }
+            } 
+
 
             if(creeps.length > 0 && creeps.length > desiredNumber) {
                 creeps[0].suicide();
