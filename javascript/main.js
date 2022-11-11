@@ -1,12 +1,16 @@
 "use strict";
 let wasm_module;
 
+
 function console_error(...args) {
     console.log(...args);
     Game.notify(args.join(' '));
 }
 
 module.exports.loop = function() {
+    delete global.Memory;
+    global.Memory = {};
+
     try {
         if (wasm_module && wasm_module.__wasm) {
             wasm_module.loop();

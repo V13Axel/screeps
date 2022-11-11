@@ -3,9 +3,10 @@ use std::collections::HashMap;
 
 use log::*;
 use screeps::{
-    find, game, prelude::*, Creep, Part, ResourceType, ReturnCode, RoomObjectProperties, StructureObject, memory,
+    find, game, prelude::*, Creep, Part, ResourceType, ReturnCode, RoomObjectProperties, StructureObject, ConstructionSite,
 };
 use goal::CreepGoal;
+use role::CreepRole;
 use wasm_bindgen::prelude::*;
 
 mod logging;
@@ -88,48 +89,13 @@ fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepGoal>) {
         Some(creep_target) => {
             let keep_target = match &creep_target {
                 CreepGoal::Upgrade(controller_id) => {
-                    if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
-                        match controller_id.resolve() {
-                            Some(controller) => {
-                                let r = creep.upgrade_controller(&controller);
-                                if r == ReturnCode::NotInRange {
-                                    creep.move_to(&controller);
-                                    true
-                                } else if r != ReturnCode::Ok {
-                                    warn!("couldn't upgrade: {:?}", r);
-                                    false
-                                } else {
-                                    true
-                                }
-                            }
-                            None => false,
-                        }
-                    } else {
-                        false
-                    }
+                    CreepRole::upgrade(creep, controller_id)
                 }
                 CreepGoal::Harvest(source_id) => {
-                    if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
-                        match source_id.resolve() {
-                            Some(source) => {
-                                if creep.pos().is_near_to(source.pos()) {
-                                    let r = creep.harvest(&source);
-                                    if r != ReturnCode::Ok {
-                                        warn!("couldn't harvest: {:?}", r);
-                                        false
-                                    } else {
-                                        true
-                                    }
-                                } else {
-                                    creep.move_to(&source);
-                                    true
-                                }
-                            }
-                            None => false,
-                        }
-                    } else {
-                        false
-                    }
+                    CreepRole::harvest(creep, source_id)
+                }
+                CreepGoal::Construct(_site_id) => {
+                    false
                 }
             };
 
@@ -140,7 +106,15 @@ fn run_creep(creep: &Creep, creep_targets: &mut HashMap<String, CreepGoal>) {
         None => {
             // no target, let's find one depending on if we have energy
             let room = creep.room().expect("couldn't resolve creep room");
-            if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
+
+            if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
+
+                for site in room.find(find::CONSTRUCTION_SITES).iter() {
+                    info!("{:?}", site.try_id());
+                    creep_targets.insert(name, CreepGoal::Construct(site.try_id().unwrap()));
+                    return;
+                }
+
                 for structure in room.find(find::STRUCTURES).iter() {
                     if let StructureObject::StructureController(controller) = structure {
                         creep_targets.insert(name, CreepGoal::Upgrade(controller.id()));
