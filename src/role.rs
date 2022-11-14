@@ -7,12 +7,30 @@ use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, Sh
 //     Upgrader,
 // }
 //
-pub struct CreepRole {
+
+pub struct RolePriority {
+
+}
+
+impl RolePriority {
+    pub fn of(role: CreepRole) -> usize{
+        match role {
+            CreepRole::Harvester => 1,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Hash)]
+pub enum CreepRole {
+    Harvester,
+}
+
+pub struct CreepPurpose {
     // name: String,
     // definition: Vec<String>
 }
 
-impl CreepRole {
+impl CreepPurpose {
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>) -> bool {
         if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
             match controller_id.resolve() {
