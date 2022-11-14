@@ -1,5 +1,5 @@
-use log::warn;
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source};
+use log::{warn, info};
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, ObjectWithId, RoomObject, StructureObject, Structure, HasPosition};
 
 // enum Role {
 //     Harvester,
@@ -31,6 +31,16 @@ pub struct CreepPurpose {
 }
 
 impl CreepPurpose {
+    // pub fn move_to(creep: &Creep, object_id: &ObjectId<HasPosition>) -> bool {
+    //     if creep.pos().is_near_to(&object_id.resolve().unwrap()) {
+    //         info!("Is nearby");
+    //     } else {
+    //         info!("Is not nearby");
+    //     }
+    //
+    //     true
+    // }
+
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>) -> bool {
         if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
             match controller_id.resolve() {
@@ -57,7 +67,7 @@ impl CreepPurpose {
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
             match source_id.resolve() {
                 Some(source) => {
-                    if creep.pos().is_near_to(&source.pos()) {
+                    if creep.pos().is_near_to(source.pos()) {
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
                             warn!("couldn't harvest: {:?}", r);
