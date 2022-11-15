@@ -1,5 +1,5 @@
-use log::{warn, info};
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, ObjectWithId, RoomObject, StructureObject, Structure, HasPosition, ObjectWithPosition, Position};
+use log::warn;
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, Position};
 
 // enum Role {
 //     Harvester,
@@ -8,10 +8,12 @@ use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, Sh
 // }
 //
 
+#[allow(dead_code)]
 pub struct RolePriority {
 
 }
 
+#[allow(dead_code)]
 impl RolePriority {
     pub fn of(role: CreepRole) -> usize{
         match role {
@@ -21,6 +23,7 @@ impl RolePriority {
 }
 
 #[derive(Eq, PartialEq, Hash)]
+#[allow(dead_code)]
 pub enum CreepRole {
     Harvester,
 }
@@ -30,6 +33,7 @@ pub struct CreepPurpose {
     // definition: Vec<String>
 }
 
+#[allow(dead_code)]
 impl CreepPurpose {
     // Should return positive only when next to the position
     pub fn move_to(creep: &Creep, position: Position) -> bool {

@@ -8,13 +8,11 @@ use screeps::{
 
 use serde::{Serialize, Deserialize};
 
-use goal::CreepGoal;
-use role::{CreepRole, CreepPurpose};
+use role::CreepPurpose;
 use wasm_bindgen::prelude::*;
 
 mod logging;
 mod role;
-mod goal;
 
 thread_local! {
     static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(
