@@ -3,11 +3,10 @@ use std::{collections::HashMap, cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 use screeps::{
-    find, game, prelude::*, Creep, Part, ResourceType, ReturnCode, RoomObjectProperties, StructureObject, ConstructionSite, JsHashMap, RawObjectId, StructureType, StructureSpawn, Source, ObjectId, RawMemory, StructureController, Find, Room, Structure,
+    find, game, prelude::*, Creep, Part, RoomObjectProperties, StructureObject, JsHashMap, RawObjectId, StructureType, StructureSpawn, Source, ObjectId, RawMemory, StructureController, Room, Structure,
 };
 
 use serde::{Serialize, Deserialize};
-use serde_wasm_bindgen::{from_value, to_value};
 
 use goal::CreepGoal;
 use role::{CreepRole, CreepPurpose};
@@ -50,6 +49,13 @@ struct RoomMemory {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 enum StructureMemory {
     Spawner(i32),
+    Controller(ControllerMemory),
+    Empty,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct ControllerMemory {
+    controller_level: usize
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -61,7 +67,7 @@ impl CreepMemory {
     pub fn default(room: Room) -> CreepMemory {
         CreepMemory {
             worker_type: CreepWorkerType::SimpleWorker(
-                SimpleJob::MoveToSpawn(
+                SimpleJob::ApproachSpawn(
                     room.find(find::MY_SPAWNS)[0].id()
                 )
             )
@@ -75,14 +81,14 @@ enum CreepWorkerType {
 }
 
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Copy)]
 enum SimpleJob {
     ApproachSource(ObjectId<Source>),
     HarvestSource(ObjectId<Source>),
-    MoveToController(ObjectId<StructureController>),
+    ApproachController(ObjectId<StructureController>),
     UpgradeController(ObjectId<StructureController>),
-    MoveToSpawn(ObjectId<StructureSpawn>),
-    // TransferToSpawn(ObjectId<StructureSpawn>),
+    ApproachSpawn(ObjectId<StructureSpawn>),
+    TransferToSpawn(ObjectId<StructureSpawn>),
 }
 
 
@@ -135,109 +141,190 @@ pub fn reset_memory() {
     })
 }
 
-pub fn save_memory() {
-    GAME_MEMORY.with(|game_memory_refcell| {
-        let game_memory = game_memory_refcell.borrow_mut();
-        let stringified = serde_json::to_string(&game_memory.to_owned());
+fn save_memory(game_memory: GameMemory) {
+    let stringified = serde_json::to_string(&game_memory);
 
-        match stringified {
-            Ok(stringified) => RawMemory::set(&JsString::from(stringified)),
-            Err(error) => info!("Could not serialize memory contents! Error: {:?}", error),
-        }
-    })
+    info!("{:?}", &stringified);
+
+    match stringified {
+        Ok(stringified) => RawMemory::set(&JsString::from(stringified)),
+        Err(error) => info!("Could not serialize memory contents! Error: {:?}", error),
+    }
 }
 
 // to use a reserved name as a function name, use `js_name`:
 #[wasm_bindgen(js_name = loop)]
 pub fn game_loop() {
+    let mut new_structure_memories = HashMap::new();
+    let mut new_creep_memories = HashMap::new();
+
     GAME_MEMORY.with(|game_memory_refcell| {
-        let game_memory = game_memory_refcell.borrow_mut();
+        let GameMemory { 
+            creep_memories,
+            structure_memories,
+            room_memories: _,
+            needs_deserialized: _ 
+        } = game_memory_refcell.borrow_mut().to_owned();
 
-        info!("Game memory: \n{:?}", game_memory);
         let structures = game::structures();
-        let creeps = game::creeps();
 
-        run_structures(&structures);
-        run_creeps(&creeps);
+        new_structure_memories = run_structures(structures, structure_memories);
+        new_creep_memories = run_creeps(creep_memories);
     });
 
     // Serialize and save to memory.
-    save_memory();
+    save_memory(GameMemory {
+        creep_memories: new_creep_memories,
+        structure_memories: new_structure_memories,
+        room_memories: HashMap::new(),
+        needs_deserialized: false,
+    });
 }
 
-pub fn run_structures(structures: &JsHashMap<RawObjectId, StructureObject>) {
-    structures.values().for_each(|structure| {
-        run_structure(structure);
-    })
+fn run_structures(structures: JsHashMap<RawObjectId, StructureObject>, structure_memories: HashMap<ObjectId<Structure>,StructureMemory>) -> HashMap<ObjectId<Structure>,StructureMemory> {
+    let mut values: HashMap<ObjectId<Structure>, StructureMemory> = HashMap::new();
+
+    for structure in structures.values() {
+        let structure_id = structure.as_structure().id();
+        let structure_memory = structure_memories
+            .get(&structure_id)
+            .unwrap_or(&StructureMemory::Spawner(1))
+            .to_owned();
+
+        info!("{:?}", structure_memory);
+
+        values.insert(structure_id, run_structure(structure, structure_memory));
+    };
+
+    values
 }
 
-pub fn run_structure(structure: StructureObject) {
+// Structure memory isn't used _yet_, but implemented here to force me into using it later
+fn run_structure(structure: StructureObject, _structure_memory: StructureMemory) -> StructureMemory {
     match structure.structure_type() {
         StructureType::Spawn => run_spawn(structure.try_into().unwrap()),
         StructureType::Controller => run_controller(structure.try_into().unwrap()),
-        st => warn!("Not yet implemented type: {:?}", st),
+        st => {
+            warn!("Not yet implemented type: {:?}", st);
+
+            StructureMemory::Empty
+        } 
     }
 }
 
-pub fn run_controller(controller: StructureController) {
-    let room = controller.room().to_owned().unwrap();
-    // let mut room_memory: RoomMemory = from_value(&room.memory()).unwrap();
-    let mut room_memory: RoomMemory = from_value::<RoomMemory>(
-        room.memory()
-    ).unwrap_or(RoomMemory{
-        controller_level: 1,
-    });
+fn run_controller(controller: StructureController) -> StructureMemory {
+    // let room = controller.room().to_owned().unwrap();
+    // let mut room_memory: RoomMemory = from_value::<RoomMemory>(
+    //     room.memory()
+    // ).unwrap_or(RoomMemory{
+    //     controller_level: 1,
+    // });
 
-    if room_memory.controller_level < controller.level().into() {
-        room_memory.controller_level = controller.level().into();
-        info!("Controller upgraded!");
-    }
+    // if room_memory.controller_level < controller.level().into() {
+    //     room_memory.controller_level = controller.level().into();
+    //     info!("Controller upgraded!");
+    // }
+
+    StructureMemory::Controller(ControllerMemory{
+        controller_level: controller.level().into()
+    })
 }
 
-pub fn run_spawn(spawn: StructureSpawn) {
+fn run_spawn(spawn: StructureSpawn) -> StructureMemory {
     let creeps = game::creeps();
     if creeps.values().count() < 5 {
         let creep_name = format!("{}-{}", String::from("Creep"), game::time());
-        spawn.spawn_creep(&[
+        spawn.spawn_creep(&vec![
             Part::Carry,
             Part::Move,
             Part::Work,
         ], &creep_name);
     }
+
+    StructureMemory::Spawner(1)
 }
 
-pub fn run_creeps(creeps: &JsHashMap<String, Creep>) {
-    creeps.values().for_each(|creep| {
-        run_creep(creep);
-    })
+fn run_creeps(creep_memories: HashMap<ObjectId<Creep>, CreepMemory>) -> HashMap<ObjectId<Creep>, CreepMemory> {
+    let mut memories = HashMap::new();
+    game::creeps().values().for_each(|creep| {
+        if creep.spawning() {
+            return;
+        }
+
+        let room = get_room_of::<Creep>(&creep);
+        let creep_memory = match creep_memories.get(&creep.try_id().unwrap()) {
+            Some(memory) => memory.to_owned(),
+            None => CreepMemory::default(room)
+        };
+
+        let new_memory = run_creep(creep.to_owned(), creep_memory);
+
+        info!("Creep: {:?}", creep.name());
+        info!("Memory: {:?}", new_memory);
+
+        memories.insert(creep.try_id().unwrap(), new_memory);
+    });
+
+    memories
 }
 
-pub fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
+fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
     object.room().unwrap()
 }
 
-pub fn run_creep(creep: Creep) {
-    info!("{:?}", creep.name());
+ fn run_creep(creep: Creep, memory: CreepMemory) -> CreepMemory {
     let creep_room_spawn: &StructureSpawn = &creep.room().to_owned().unwrap().find(find::MY_SPAWNS)[0];
-    let memory = from_value(creep.memory()).unwrap_or(
-        CreepMemory::default(
-            get_room_of::<Creep>(&creep)
-        )
-    );
 
     // Break out memory values
-    let CreepMemory { worker_type } = memory;
+    let CreepMemory { mut worker_type } = memory;
 
     let job = match worker_type {
         CreepWorkerType::SimpleWorker(job) => job
     };
 
     let keep_job = match job {
-        SimpleJob::ApproachSource(target) => { info!("{:?}", target); true }, // CreepPurpose::move_to(&creep, &target),
-        SimpleJob::HarvestSource(target) => { info!("{:?}", target); true },
-        SimpleJob::MoveToController(target) => { info!("{:?}", target); true },
-        SimpleJob::UpgradeController(target) => { info!("{:?}", target); true },
-        SimpleJob::MoveToSpawn(target)=> { info!("{:?}", target); true },
-        // TransferToSpawn(ObjectId<StructureSpawn>),
+        SimpleJob::ApproachSource(target) => { 
+            info!("Approach {:?}", target);
+            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos())
+        }, 
+        SimpleJob::HarvestSource(target) => { info!("Harvest {:?}", target); true },
+        SimpleJob::ApproachController(target) => { info!("Approach {:?}", target); true },
+        SimpleJob::UpgradeController(target) => { info!("Upgrade {:?}", target); true },
+        SimpleJob::ApproachSpawn(target)=> { 
+            info!("Approach {:?}", target); 
+            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos())
+        },
+        SimpleJob::TransferToSpawn(_target) => false,
     };
+
+    let new_job: SimpleJob;
+    if !keep_job {
+        new_job = match job {
+            SimpleJob::ApproachSource(target) => {
+                SimpleJob::HarvestSource(target)
+            }, 
+            SimpleJob::HarvestSource(_target) => {
+                SimpleJob::ApproachSpawn(creep_room_spawn.id())
+            },
+            SimpleJob::ApproachController(target) => {
+                SimpleJob::UpgradeController(target)
+            },
+            SimpleJob::UpgradeController(_target) => {
+                SimpleJob::ApproachSource(creep.room().to_owned().unwrap().find(find::SOURCES)[0].id())
+            },
+            SimpleJob::ApproachSpawn(target)=> {
+                SimpleJob::TransferToSpawn(target)
+            },
+            SimpleJob::TransferToSpawn(_target) => {
+                SimpleJob::HarvestSource(creep.room().to_owned().unwrap().find(find::SOURCES)[0].id())
+            }
+        };
+
+        worker_type = CreepWorkerType::SimpleWorker(new_job);
+    }
+
+
+    CreepMemory {
+        worker_type
+    }
 }
