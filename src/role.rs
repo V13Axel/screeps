@@ -1,5 +1,8 @@
 use log::warn;
 use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, Position};
+use serde_wasm_bindgen::to_value;
+
+use crate::CreepPath;
 
 // enum Role {
 //     Harvester,
@@ -41,8 +44,15 @@ impl CreepPurpose {
     }
     
     // Should return positive only when at the position
-    pub fn move_near(creep: &Creep, position: Position) -> bool {
-        creep.pos().is_near_to(position) 
+    pub fn move_near(creep: &Creep, position: Position, path: CreepPath) -> bool {
+        if creep.pos().is_near_to(position) {
+            true
+        } else {
+            match creep.move_by_path(&to_value(&path).unwrap().into()) {
+                ReturnCode::Ok => true,
+                _ => false,
+            }
+        }
     }
 
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>) -> bool {

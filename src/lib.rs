@@ -3,7 +3,7 @@ use std::{collections::HashMap, cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 use screeps::{
-    find, game, prelude::*, Creep, Part, RoomObjectProperties, StructureObject, JsHashMap, RawObjectId, StructureType, StructureSpawn, Source, ObjectId, RawMemory, StructureController, Room, Structure,
+    find, game, prelude::*, Creep, Part, RoomObjectProperties, StructureObject, JsHashMap, RawObjectId, StructureType, StructureSpawn, Source, ObjectId, RawMemory, StructureController, Room, Structure, Position,
 };
 
 use serde::{Serialize, Deserialize};
@@ -59,6 +59,12 @@ struct ControllerMemory {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 struct CreepMemory {
     worker_type: CreepWorkerType,
+    current_path: Option<CreepPath>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct CreepPath {
+    steps: Vec<Position>,
 }
 
 impl CreepMemory {
@@ -68,7 +74,8 @@ impl CreepMemory {
                 SimpleJob::ApproachSpawn(
                     room.find(find::MY_SPAWNS)[0].id()
                 )
-            )
+            ),
+            current_path: None
         }
     }
 }
@@ -76,6 +83,8 @@ impl CreepMemory {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 enum CreepWorkerType {
     SimpleWorker(SimpleJob),
+    Upgrader(SimpleJob),
+    Harvester(SimpleJob),
 }
 
 
@@ -274,23 +283,25 @@ fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
     let creep_room_spawn: &StructureSpawn = &creep.room().to_owned().unwrap().find(find::MY_SPAWNS)[0];
 
     // Break out memory values
-    let CreepMemory { mut worker_type } = memory;
+    let CreepMemory { mut worker_type, current_path } = memory;
 
     let job = match worker_type {
-        CreepWorkerType::SimpleWorker(job) => job
+        CreepWorkerType::SimpleWorker(job) => job,
+        CreepWorkerType::Upgrader(job) => job,
+        CreepWorkerType::Harvester(job) => job,
     };
 
     let keep_job = match job {
         SimpleJob::ApproachSource(target) => { 
             info!("Approach {:?}", target);
-            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos())
+            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos(), current_path.to_owned().unwrap())
         }, 
         SimpleJob::HarvestSource(target) => { info!("Harvest {:?}", target); true },
         SimpleJob::ApproachController(target) => { info!("Approach {:?}", target); true },
         SimpleJob::UpgradeController(target) => { info!("Upgrade {:?}", target); true },
         SimpleJob::ApproachSpawn(target)=> { 
             info!("Approach {:?}", target); 
-            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos())
+            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos(), current_path.to_owned().unwrap())
         },
         SimpleJob::TransferToSpawn(_target) => false,
     };
@@ -302,7 +313,14 @@ fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
                 SimpleJob::HarvestSource(target)
             }, 
             SimpleJob::HarvestSource(_target) => {
-                SimpleJob::ApproachSpawn(creep_room_spawn.id())
+                match worker_type {
+                    CreepWorkerType::Upgrader(_) => SimpleJob::ApproachController(creep.room().to_owned().unwrap().controller().to_owned().unwrap().id()),
+                    CreepWorkerType::Harvester(_) => {
+                        // current_path = creep.pos().
+                        SimpleJob::ApproachSpawn(creep_room_spawn.id())
+                    },
+                    CreepWorkerType::SimpleWorker(_) => SimpleJob::ApproachSpawn(creep_room_spawn.id()),
+                }
             },
             SimpleJob::ApproachController(target) => {
                 SimpleJob::UpgradeController(target)
@@ -323,6 +341,7 @@ fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
 
 
     CreepMemory {
-        worker_type
+        worker_type,
+        current_path
     }
 }
