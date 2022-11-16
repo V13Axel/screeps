@@ -3,81 +3,24 @@ use std::{collections::HashMap, cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 use screeps::{
-    find, game, prelude::*, Creep, Part, RoomObjectProperties, StructureObject, JsHashMap, RawObjectId, StructureType, StructureSpawn, Source, ObjectId, RawMemory, StructureController, Room, Structure, Position,
+    StructureSpawn, Source, ObjectId, RawMemory, StructureController,
 };
 
 use serde::{Serialize, Deserialize};
 
-use role::CreepPurpose;
 use wasm_bindgen::prelude::*;
+
+use crate::mem::GameMemory;
 
 mod logging;
 mod role;
+mod mem;
+mod util;
 
 thread_local! {
     static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(
         GameMemory::default()
     );
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-struct GameMemory {
-    needs_deserialized: bool,
-    creep_memories: HashMap<ObjectId<Creep>, CreepMemory>,
-    room_memories: HashMap<String, RoomMemory>,
-    structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
-}
-
-impl GameMemory {
-    pub fn default() -> Self {
-        GameMemory { 
-            needs_deserialized: true,
-            creep_memories: HashMap::new(),
-            room_memories: HashMap::new(),
-            structure_memories: HashMap::new() 
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-struct RoomMemory {
-    controller_level: usize,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-enum StructureMemory {
-    Spawner(i32),
-    Controller(ControllerMemory),
-    Empty,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-struct ControllerMemory {
-    controller_level: usize
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-struct CreepMemory {
-    worker_type: CreepWorkerType,
-    current_path: Option<CreepPath>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct CreepPath {
-    steps: Vec<Position>,
-}
-
-impl CreepMemory {
-    pub fn default(room: Room) -> CreepMemory {
-        CreepMemory {
-            worker_type: CreepWorkerType::SimpleWorker(
-                SimpleJob::ApproachSpawn(
-                    room.find(find::MY_SPAWNS)[0].id()
-                )
-            ),
-            current_path: None
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -172,12 +115,9 @@ pub fn game_loop() {
             room_memories: _,
             needs_deserialized: _ 
         } = game_memory_refcell.borrow_mut().to_owned();
-
-        let structures = game::structures();
-
-        new_structure_memories = run_structures(structures, structure_memories);
-        new_creep_memories = run_creeps(creep_memories);
     });
+
+    info!("Whoo");
 
     // Serialize and save to memory.
     save_memory(GameMemory {
@@ -186,162 +126,4 @@ pub fn game_loop() {
         room_memories: HashMap::new(),
         needs_deserialized: false,
     });
-}
-
-fn run_structures(structures: JsHashMap<RawObjectId, StructureObject>, structure_memories: HashMap<ObjectId<Structure>,StructureMemory>) -> HashMap<ObjectId<Structure>,StructureMemory> {
-    let mut values: HashMap<ObjectId<Structure>, StructureMemory> = HashMap::new();
-
-    for structure in structures.values() {
-        let structure_id = structure.as_structure().id();
-        let structure_memory = structure_memories
-            .get(&structure_id)
-            .unwrap_or(&StructureMemory::Spawner(1))
-            .to_owned();
-
-        info!("{:?}", structure_memory);
-
-        values.insert(structure_id, run_structure(structure, structure_memory));
-    };
-
-    values
-}
-
-// Structure memory isn't used _yet_, but implemented here to force me into using it later
-fn run_structure(structure: StructureObject, _structure_memory: StructureMemory) -> StructureMemory {
-    match structure.structure_type() {
-        StructureType::Spawn => run_spawn(structure.try_into().unwrap()),
-        StructureType::Controller => run_controller(structure.try_into().unwrap()),
-        st => {
-            warn!("Not yet implemented type: {:?}", st);
-
-            StructureMemory::Empty
-        } 
-    }
-}
-
-fn run_controller(controller: StructureController) -> StructureMemory {
-    // let room = controller.room().to_owned().unwrap();
-    // let mut room_memory: RoomMemory = from_value::<RoomMemory>(
-    //     room.memory()
-    // ).unwrap_or(RoomMemory{
-    //     controller_level: 1,
-    // });
-
-    // if room_memory.controller_level < controller.level().into() {
-    //     room_memory.controller_level = controller.level().into();
-    //     info!("Controller upgraded!");
-    // }
-
-    StructureMemory::Controller(ControllerMemory{
-        controller_level: controller.level().into()
-    })
-}
-
-fn run_spawn(spawn: StructureSpawn) -> StructureMemory {
-    let creeps = game::creeps();
-    if creeps.values().count() < 5 {
-        let creep_name = format!("{}-{}", String::from("Creep"), game::time());
-        spawn.spawn_creep(&vec![
-            Part::Carry,
-            Part::Move,
-            Part::Work,
-        ], &creep_name);
-    }
-
-    StructureMemory::Spawner(1)
-}
-
-fn run_creeps(creep_memories: HashMap<ObjectId<Creep>, CreepMemory>) -> HashMap<ObjectId<Creep>, CreepMemory> {
-    let mut memories = HashMap::new();
-    game::creeps().values().for_each(|creep| {
-        if creep.spawning() {
-            return;
-        }
-
-        let room = get_room_of::<Creep>(&creep);
-        let creep_memory = match creep_memories.get(&creep.try_id().unwrap()) {
-            Some(memory) => memory.to_owned(),
-            None => CreepMemory::default(room)
-        };
-
-        let new_memory = run_creep(creep.to_owned(), creep_memory);
-
-        info!("Creep: {:?}", creep.name());
-        info!("Memory: {:?}", new_memory);
-
-        memories.insert(creep.try_id().unwrap(), new_memory);
-    });
-
-    memories
-}
-
-fn get_room_of<T>(object: &dyn RoomObjectProperties) -> Room {
-    object.room().unwrap()
-}
-
- fn run_creep(creep: Creep, memory: CreepMemory) -> CreepMemory {
-    let creep_room_spawn: &StructureSpawn = &creep.room().to_owned().unwrap().find(find::MY_SPAWNS)[0];
-
-    // Break out memory values
-    let CreepMemory { mut worker_type, current_path } = memory;
-
-    let job = match worker_type {
-        CreepWorkerType::SimpleWorker(job) => job,
-        CreepWorkerType::Upgrader(job) => job,
-        CreepWorkerType::Harvester(job) => job,
-    };
-
-    let keep_job = match job {
-        SimpleJob::ApproachSource(target) => { 
-            info!("Approach {:?}", target);
-            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos(), current_path.to_owned().unwrap())
-        }, 
-        SimpleJob::HarvestSource(target) => { info!("Harvest {:?}", target); true },
-        SimpleJob::ApproachController(target) => { info!("Approach {:?}", target); true },
-        SimpleJob::UpgradeController(target) => { info!("Upgrade {:?}", target); true },
-        SimpleJob::ApproachSpawn(target)=> { 
-            info!("Approach {:?}", target); 
-            CreepPurpose::move_near(&creep, target.resolve().unwrap().pos(), current_path.to_owned().unwrap())
-        },
-        SimpleJob::TransferToSpawn(_target) => false,
-    };
-
-    let new_job: SimpleJob;
-    if !keep_job {
-        new_job = match job {
-            SimpleJob::ApproachSource(target) => {
-                SimpleJob::HarvestSource(target)
-            }, 
-            SimpleJob::HarvestSource(_target) => {
-                match worker_type {
-                    CreepWorkerType::Upgrader(_) => SimpleJob::ApproachController(creep.room().to_owned().unwrap().controller().to_owned().unwrap().id()),
-                    CreepWorkerType::Harvester(_) => {
-                        // current_path = creep.pos().
-                        SimpleJob::ApproachSpawn(creep_room_spawn.id())
-                    },
-                    CreepWorkerType::SimpleWorker(_) => SimpleJob::ApproachSpawn(creep_room_spawn.id()),
-                }
-            },
-            SimpleJob::ApproachController(target) => {
-                SimpleJob::UpgradeController(target)
-            },
-            SimpleJob::UpgradeController(_target) => {
-                SimpleJob::ApproachSource(creep.room().to_owned().unwrap().find(find::SOURCES)[0].id())
-            },
-            SimpleJob::ApproachSpawn(target)=> {
-                SimpleJob::TransferToSpawn(target)
-            },
-            SimpleJob::TransferToSpawn(_target) => {
-                SimpleJob::HarvestSource(creep.room().to_owned().unwrap().find(find::SOURCES)[0].id())
-            }
-        };
-
-        worker_type = CreepWorkerType::SimpleWorker(new_job);
-    }
-
-
-    CreepMemory {
-        worker_type,
-        current_path
-    }
 }

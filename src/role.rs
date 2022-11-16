@@ -2,14 +2,7 @@ use log::warn;
 use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, Position};
 use serde_wasm_bindgen::to_value;
 
-use crate::CreepPath;
-
-// enum Role {
-//     Harvester,
-//     Builder,
-//     Upgrader,
-// }
-//
+use crate::util::path::CreepPath;
 
 #[allow(dead_code)]
 pub struct RolePriority {
