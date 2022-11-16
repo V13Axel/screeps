@@ -1,8 +1,9 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap};
 
-use screeps::{Room, find, HasTypedId};
+use log::info;
+use screeps::{Room, find, HasTypedId, game, Creep, SharedCreepProperties, MaybeHasTypedId};
 
-use crate::{mem::GameMemory, task::Task};
+use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType};
 
 pub struct TaskManager {
     rooms: Vec<Room>,
@@ -15,7 +16,32 @@ impl TaskManager {
         }
     }
 
-    pub fn run(&self, mut game_memory: GameMemory) -> GameMemory {
+    pub fn assign(mut game_memory: GameMemory) -> GameMemory {
+        // TODO: Filter for only idle creeps
+        let creeps: Vec<Creep> = game::creeps().values().collect();
+
+        for creep in creeps {
+            let id = creep.try_id();
+            if id.is_none() {
+                continue;
+            }
+
+
+            let default_creep_memory = &CreepMemory::default(creep.room().unwrap());
+            let creep_memory: CreepMemory = game_memory.creep_memories.get(&id.unwrap()).unwrap_or(default_creep_memory).to_owned();
+            info!("{:?}", creep_memory);
+
+            let current_task: Task = match &creep_memory.worker_type {
+                CreepWorkerType::SimpleWorker(task) => task.to_owned()
+            };
+
+            game_memory.creep_memories.insert(id.unwrap(), creep_memory);
+        }
+
+        game_memory
+    }
+
+    pub fn scan(&self, mut game_memory: GameMemory) -> GameMemory {
         for room in self.rooms.iter() {
             game_memory.tasks.insert(room.name().to_string(), self.scan_room(&room));
         }

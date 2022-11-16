@@ -26,7 +26,8 @@ thread_local! {
 pub fn run_managers(mut memory: GameMemory) -> GameMemory {
     let rooms: Vec<Room> = game::rooms().values().collect();
 
-    memory = TaskManager::with_rooms(rooms).run(memory);
+    memory = TaskManager::with_rooms(rooms).scan(memory);
+    memory = TaskManager::assign(memory);
 
     memory
 }
@@ -114,7 +115,7 @@ pub fn reset_memory() {
 fn save_memory(game_memory: GameMemory) {
     let stringified = serde_json::to_string(&game_memory);
 
-    info!("{:?}", &stringified);
+    // info!("{:?}", &stringified);
 
     match stringified {
         Ok(stringified) => RawMemory::set(&JsString::from(stringified)),

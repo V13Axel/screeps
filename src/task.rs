@@ -7,4 +7,5 @@ pub enum Task {
     Build { site: ObjectId<ConstructionSite>, worked_by: Vec<ObjectId<Creep>> },
     Upgrade { controller: ObjectId<StructureController>, worked_by: Vec<ObjectId<Creep>> },
     Deposit { dest: ObjectId<StructureSpawn>, worked_by: Vec<ObjectId<Creep>> },
+    Idle,
 }

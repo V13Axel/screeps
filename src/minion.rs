@@ -3,20 +3,11 @@ use screeps::{
 };
 use serde::{Serialize, Deserialize};
 
+use crate::task::Task;
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum CreepWorkerType {
-    SimpleWorker(SimpleJob),
-    Upgrader(SimpleJob),
-    Harvester(SimpleJob),
-}
-
-
-#[derive(Clone, Serialize, Deserialize, Debug, Copy)]
-pub enum SimpleJob {
-    ApproachSource(ObjectId<Source>),
-    HarvestSource(ObjectId<Source>),
-    ApproachController(ObjectId<StructureController>),
-    UpgradeController(ObjectId<StructureController>),
-    ApproachSpawn(ObjectId<StructureSpawn>),
-    TransferToSpawn(ObjectId<StructureSpawn>),
+    SimpleWorker(Task),
+    // Upgrader(Task),
+    // Harvester(Task),
 }
