@@ -2,11 +2,8 @@ use std::{collections::HashMap, cell::RefCell, panic};
 
 use js_sys::JsString;
 use log::*;
-use screeps::{
-    StructureSpawn, Source, ObjectId, RawMemory, StructureController,
-};
-
-use serde::{Serialize, Deserialize};
+use manager::TaskManager;
+use screeps::{RawMemory, game, Room};
 
 use wasm_bindgen::prelude::*;
 
@@ -16,6 +13,9 @@ mod logging;
 mod role;
 mod mem;
 mod util;
+mod minion;
+mod manager;
+mod task;
 
 thread_local! {
     static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(
@@ -23,24 +23,44 @@ thread_local! {
     );
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-enum CreepWorkerType {
-    SimpleWorker(SimpleJob),
-    Upgrader(SimpleJob),
-    Harvester(SimpleJob),
+pub fn run_managers(mut memory: GameMemory) -> GameMemory {
+    let rooms: Vec<Room> = game::rooms().values().collect();
+
+    memory = TaskManager::with_rooms(rooms).run(memory);
+
+    memory
 }
 
+pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
+    memory = run_managers(memory);
 
-#[derive(Clone, Serialize, Deserialize, Debug, Copy)]
-enum SimpleJob {
-    ApproachSource(ObjectId<Source>),
-    HarvestSource(ObjectId<Source>),
-    ApproachController(ObjectId<StructureController>),
-    UpgradeController(ObjectId<StructureController>),
-    ApproachSpawn(ObjectId<StructureSpawn>),
-    TransferToSpawn(ObjectId<StructureSpawn>),
+    memory
 }
 
+// to use a reserved name as a function name, use `js_name`:
+#[wasm_bindgen(js_name = loop)]
+pub fn game_loop() {
+    // Get our local heap memory and do the actual game logic
+    GAME_MEMORY.with(|game_memory_refcell| {
+        let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
+
+        game_memory = actual_game_loop(game_memory);
+
+        // Persist to memory refcell after game logic executes
+        game_memory_refcell.replace(game_memory);
+    });
+
+    // Serialize and save to memory. This is done separately to avoid weirdness.
+    GAME_MEMORY.with(|game_memory_refcell| {
+        save_memory(game_memory_refcell.borrow().to_owned());
+    })
+}
+
+/**
+* 
+*   Setup/memory management stuff
+*
+*/
 
 fn panic_handler(info: &panic::PanicInfo) {
     error!("{:?}", info.to_string());
@@ -102,28 +122,3 @@ fn save_memory(game_memory: GameMemory) {
     }
 }
 
-// to use a reserved name as a function name, use `js_name`:
-#[wasm_bindgen(js_name = loop)]
-pub fn game_loop() {
-    let mut new_structure_memories = HashMap::new();
-    let mut new_creep_memories = HashMap::new();
-
-    GAME_MEMORY.with(|game_memory_refcell| {
-        let GameMemory { 
-            creep_memories,
-            structure_memories,
-            room_memories: _,
-            needs_deserialized: _ 
-        } = game_memory_refcell.borrow_mut().to_owned();
-    });
-
-    info!("Whoo");
-
-    // Serialize and save to memory.
-    save_memory(GameMemory {
-        creep_memories: new_creep_memories,
-        structure_memories: new_structure_memories,
-        room_memories: HashMap::new(),
-        needs_deserialized: false,
-    });
-}

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use screeps::{ObjectId, Creep, Structure, Position, Room, find, HasTypedId};
 use serde::{Serialize, Deserialize};
 
-use crate::{CreepWorkerType, SimpleJob};
+use crate::{minion::{CreepWorkerType, SimpleJob}, task::Task};
+
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameMemory {
@@ -11,6 +12,7 @@ pub struct GameMemory {
     pub creep_memories: HashMap<ObjectId<Creep>, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
+    pub tasks: HashMap<String, Vec<Task>>,
 }
 
 impl GameMemory {
@@ -19,7 +21,8 @@ impl GameMemory {
             needs_deserialized: true,
             creep_memories: HashMap::new(),
             room_memories: HashMap::new(),
-            structure_memories: HashMap::new() 
+            structure_memories: HashMap::new(),
+            tasks: HashMap::new()
         }
     }
 }
@@ -27,6 +30,14 @@ impl GameMemory {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RoomMemory {
     controller_level: usize,
+}
+
+impl RoomMemory {
+    pub fn default() -> Self {
+        Self {
+            controller_level: 1
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
