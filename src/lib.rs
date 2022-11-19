@@ -55,8 +55,11 @@ pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
 }
 
 pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
-    if game::time() % 50 == 0 {
+    if memory.ticks_since_managers >= 50 {
         memory = run_managers(memory);
+        memory.ticks_since_managers = 0;
+    } else {
+        memory.ticks_since_managers += 1;
     }
 
     for creep in game::creeps().values() {

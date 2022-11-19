@@ -21,6 +21,7 @@ impl TaskManager {
 
         for creep in creeps {
             if creep.spawning() {
+                info!("Skipping {} due to spawning", creep.name());
                 continue;
             }
 
@@ -31,6 +32,7 @@ impl TaskManager {
 
             match game_memory.tasks.get(creep_room) {
                 Some(room_tasks) => {
+                    info!("Room has tasks: {:?}", room_tasks);
                     let mut copied_tasks = room_tasks.to_owned();
                     let mut creep_task = copied_tasks.pop().unwrap_or(Task::Idle);
 
@@ -57,8 +59,12 @@ impl TaskManager {
                     game_memory.tasks.insert(creep_room.to_string(), copied_tasks);
 
                     creep_memory.worker_type = CreepWorkerType::SimpleWorker(creep_task.to_owned());
+
+                    game_memory.creep_memories.insert(creep.name(), creep_memory);
                 },
-                None => {} 
+                None => {
+                    info!("Room has no tasks");
+                } 
             };
 
             // We only get this far if the screep is idle. Let's give them a task!
