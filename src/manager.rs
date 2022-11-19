@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use log::info;
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, RoomPosition, Terrain};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util};
 
@@ -38,10 +38,10 @@ impl TaskManager {
 
                     creep_task = match creep_task {
                         Task::Idle => Task::Idle,
-                        Task::Harvest { node, mut worked_by } => {
+                        Task::Harvest { node, mut worked_by, space_limit } => {
                             worked_by.push(creep.try_id().unwrap());
 
-                            Task::Harvest { node, worked_by }
+                            Task::Harvest { node, worked_by, space_limit }
                         }
                         Task::Build { site, mut worked_by } => {
                             worked_by.push(creep.try_id().unwrap());
@@ -98,16 +98,32 @@ impl TaskManager {
         for source in sources.iter() {
             let found: Vec<&Task> = room_tasks.iter().filter(|task| {
                 match task {
-                    Task::Harvest { node, worked_by: _ } => node.to_string() == source.id().to_string(),
+                    Task::Harvest { node, worked_by: _, space_limit: _ } => node.to_string() == source.id().to_string(),
                     _ => false
                 }
             }).collect();
+
+            let position  = source.pos();
+            let x = position.x();
+            let y = position.y();
+            let room_name = room.name();
+            let space_limit = 0;
+
+            for check_x in (x-1)..(x+1) {
+                for check_y in (y-1)..(y+1) {
+                    RoomPosition::new(check_x, check_y, room_name).look().to_vec().iter().for_each(|item| {
+                        info!("{:?}", item);
+                    });
+
+                    // info!("{:?}", values);
+                }
+            }
 
             if found.len() > 0 {
                 continue;
             }
 
-            room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![] });
+            room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit });
         }
 
         room_tasks

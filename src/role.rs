@@ -2,12 +2,12 @@ use log::{warn, info};
 use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, Position, RoomPosition};
 use serde_wasm_bindgen::to_value;
 
-use crate::{util::path::CreepPath, mem::CreepMemory};
+use crate::{util::path::CreepPath, mem::CreepMemory, minion::CreepWorkerType, task::Task};
 
 
 pub struct CreepPurpose {
-    name: String,
-    definition: Vec<String>
+    // name: String,
+    // definition: Vec<String>
 }
 
 impl CreepPurpose {
@@ -97,17 +97,21 @@ impl CreepPurpose {
             false
         };
 
+        if !keep_job {
+            memory.worker_type = CreepWorkerType::SimpleWorker(Task::Idle);
+        }
+
         memory
     }
 
-    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: CreepMemory) -> CreepMemory {
+    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, mut memory: CreepMemory) -> CreepMemory {
         let keep_job = if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
             match source_id.resolve() {
                 Some(source) => {
                     if creep.pos().is_near_to(source.pos()) {
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
-                            warn!("couldn't harvest: {:?}", r);
+                            info!("couldn't harvest: {:?}", r);
                             false
                         } else {
                             true
@@ -122,6 +126,10 @@ impl CreepPurpose {
         } else {
             false
         };
+
+        if !keep_job {
+            memory.worker_type = CreepWorkerType::SimpleWorker(Task::Idle);
+        }
 
         memory
     }

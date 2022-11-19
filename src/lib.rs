@@ -44,7 +44,7 @@ pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
     let new_memory = match creep_memory.worker_type {
         minion::CreepWorkerType::SimpleWorker(ref task) => match task {
             Task::Idle => creep_memory,
-            Task::Harvest { node, worked_by: _ } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
+            Task::Harvest { node, worked_by: _, .. } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
             _ => {
                 todo!("Not yet implemented: {:?}", task);
             }
@@ -85,7 +85,11 @@ pub fn game_loop() {
 
     // Serialize and save to memory. This is done separately to avoid weirdness.
     GAME_MEMORY.with(|game_memory_refcell| {
-        save_memory(game_memory_refcell.borrow().to_owned());
+        let mut memory_to_save = game_memory_refcell.borrow_mut().to_owned();
+
+        memory_to_save.ticks_since_managers = 9999;
+
+        save_memory(memory_to_save);
     });
 
     info!("Game loop finished: {}", game::time());
