@@ -40,37 +40,29 @@ pub fn run_managers(mut memory: GameMemory) -> GameMemory {
 }
 
 pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
-    // info!("{:?}\n{:?}", creep.name(), creep_memory);
-    let new_memory = match creep_memory.worker_type {
-        minion::CreepWorkerType::SimpleWorker(ref task) => match task {
-            Task::Idle => creep_memory,
-            Task::Harvest { node, worked_by: _, .. } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
-            _ => {
-                todo!("Not yet implemented: {:?}", task);
-            }
+    match creep_memory.worker_type {
+        minion::CreepWorkerType::SimpleWorker(ref task) => {
+            match task {
+                Task::Idle => CreepPurpose::idle(creep, creep_memory.to_owned()),
+                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
+                _ => {
+                    todo!("Not yet implemented: {:?}", task);
+                }
+            }     
         }
-    };
-
-    new_memory
-}
-
-pub fn run_creeps(mut memory: GameMemory) -> GameMemory {
-    let mut new_creep_memories = HashMap::new();
-
-    for creep in game::creeps().values() {
-        let mut creep_memory = memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
-
-        creep_memory = run_creep(&creep, creep_memory);
-
-        new_creep_memories.insert(creep.name().to_string(), creep_memory);
     }
-
-    memory.creep_memories = new_creep_memories;
-
-    memory
 }
 
-pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
+pub fn run_creeps(creep_memories: HashMap<String, CreepMemory>) -> HashMap<String, CreepMemory> {
+    game::creeps().values().map(|creep| {
+        (
+            creep.name(),
+            run_creep(&creep, creep_memories.get(&creep.name()).unwrap_or_default().to_owned())
+        )
+    }).collect()
+}
+
+pub fn game_loop(mut memory: GameMemory) -> GameMemory {
     if memory.ticks_since_managers >= 50 {
         memory = run_managers(memory);
         memory.ticks_since_managers = 0;
@@ -78,19 +70,18 @@ pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
         memory.ticks_since_managers += 1;
     }
 
-    memory = run_creeps(memory);
+    memory.creep_memories = run_creeps(memory.creep_memories);
 
     memory
 }
 
 // to use a reserved name as a function name, use `js_name`:
 #[wasm_bindgen(js_name = loop)]
-pub fn game_loop() {
+pub fn memory_loop() {
     // Get our local heap memory and do the actual game logic
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
-
-        game_memory = actual_game_loop(game_memory);
+        game_memory = game_loop(game_memory);
 
         // Persist to memory refcell after game logic executes
         game_memory_refcell.replace(game_memory);
@@ -105,7 +96,7 @@ pub fn game_loop() {
         save_memory(memory_to_save);
     });
 
-    info!("Game loop finished: {}", game::time());
+    debug!("Game loop finished: {}", game::time());
 }
 
 /**

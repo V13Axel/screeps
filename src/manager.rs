@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use log::info;
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, RoomPosition, Terrain};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util};
 
@@ -12,25 +12,28 @@ pub struct TaskManager {
 impl TaskManager {
     pub fn with_rooms(rooms: &Vec<Room>) -> Self {
         TaskManager {
-            rooms: rooms.iter().map(|room| room.to_owned()).to_owned().collect()
+            rooms: rooms.iter()
+                .map(|room| room.to_owned())
+                .to_owned()
+                .collect()
         }
     }
 
-    pub fn assign(mut game_memory: GameMemory) -> GameMemory {
+    pub fn assign(game_memory: GameMemory) -> GameMemory {
         let creeps = util::screeps::Screeps::get_idle_screeps(&game_memory);
+        let GameMemory { mut creep_memories, mut tasks, ticks_since_managers, structure_memories, room_memories, needs_deserialized } = game_memory;
 
         for creep in creeps {
             if creep.spawning() {
-                info!("Skipping {} due to spawning", creep.name());
                 continue;
             }
 
-            let mut creep_memory: CreepMemory = game_memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
+            let mut creep_memory: CreepMemory = creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
             info!("Creep - {:?}", creep_memory);
 
             let creep_room = &creep.room().unwrap().name().to_string();
 
-            match game_memory.tasks.get(creep_room) {
+            match tasks.get(creep_room) {
                 Some(room_tasks) => {
                     info!("Room has tasks: {:?}", room_tasks);
                     let mut copied_tasks = room_tasks.to_owned();
@@ -56,22 +59,27 @@ impl TaskManager {
 
                     copied_tasks.push(creep_task.to_owned());
 
-                    game_memory.tasks.insert(creep_room.to_string(), copied_tasks);
+                    tasks.insert(creep_room.to_string(), copied_tasks);
 
                     creep_memory.worker_type = CreepWorkerType::SimpleWorker(creep_task.to_owned());
 
-                    game_memory.creep_memories.insert(creep.name(), creep_memory);
+                    creep_memories.insert(creep.name(), creep_memory);
                 },
                 None => {
                     info!("Room has no tasks");
                 } 
             };
-
-            // We only get this far if the screep is idle. Let's give them a task!
         }
 
 
-        game_memory
+        GameMemory { 
+            ticks_since_managers,
+            needs_deserialized,
+            creep_memories,
+            room_memories,
+            structure_memories,
+            tasks 
+        }
     }
 
     pub fn scan(&self, mut game_memory: GameMemory) -> GameMemory {
@@ -103,27 +111,11 @@ impl TaskManager {
                 }
             }).collect();
 
-            let position  = source.pos();
-            let x = position.x();
-            let y = position.y();
-            let room_name = room.name();
-            let space_limit = 0;
-
-            for check_x in (x-1)..(x+1) {
-                for check_y in (y-1)..(y+1) {
-                    RoomPosition::new(check_x, check_y, room_name).look().to_vec().iter().for_each(|item| {
-                        info!("{:?}", item);
-                    });
-
-                    // info!("{:?}", values);
-                }
-            }
-
             if found.len() > 0 {
                 continue;
             }
 
-            room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit });
+            room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit: 2 });
         }
 
         room_tasks
