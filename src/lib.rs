@@ -9,6 +9,7 @@ use screeps::{RawMemory, game, Room, Creep, SharedCreepProperties};
 
 use task::Task;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 use crate::mem::GameMemory;
 
@@ -27,6 +28,7 @@ thread_local! {
 }
 
 pub fn run_managers(mut memory: GameMemory) -> GameMemory {
+    console::log_1(&JsString::from("<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"));
     let rooms: Vec<Room> = game::rooms()
         .values()
         .collect();
@@ -39,12 +41,13 @@ pub fn run_managers(mut memory: GameMemory) -> GameMemory {
     memory
 }
 
-pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
-    match creep_memory.worker_type {
+pub fn run_creep(creep: &Creep, memory: CreepMemory) -> CreepMemory {
+    match memory.worker_type {
         minion::CreepWorkerType::SimpleWorker(ref task) => {
             match task {
-                Task::Idle => CreepPurpose::idle(creep, creep_memory.to_owned()),
-                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
+                Task::Idle => CreepPurpose::idle(creep, memory.to_owned()),
+                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory.to_owned()),
+                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, controller, memory.to_owned()),
                 _ => {
                     todo!("Not yet implemented: {:?}", task);
                 }

@@ -1,7 +1,7 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashMap};
 
 use log::info;
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util};
 
@@ -29,46 +29,10 @@ impl TaskManager {
             }
 
             let mut creep_memory: CreepMemory = creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
-            info!("Creep - {:?}", creep_memory);
 
-            let creep_room = &creep.room().unwrap().name().to_string();
+            (creep_memory, tasks) = Self::assign_creep(&creep, creep_memory, tasks);
 
-            match tasks.get(creep_room) {
-                Some(room_tasks) => {
-                    info!("Room has tasks: {:?}", room_tasks);
-                    let mut copied_tasks = room_tasks.to_owned();
-                    let mut creep_task = copied_tasks.pop().unwrap_or(Task::Idle);
-
-                    creep_task = match creep_task {
-                        Task::Idle => Task::Idle,
-                        Task::Harvest { node, mut worked_by, space_limit } => {
-                            worked_by.push(creep.try_id().unwrap());
-
-                            Task::Harvest { node, worked_by, space_limit }
-                        }
-                        Task::Build { site, mut worked_by } => {
-                            worked_by.push(creep.try_id().unwrap());
-
-                            Task::Build { 
-                                site, 
-                                worked_by 
-                            }
-                        },
-                        _ => todo!("Haven't implemented that yet"),
-                    };
-
-                    copied_tasks.push(creep_task.to_owned());
-
-                    tasks.insert(creep_room.to_string(), copied_tasks);
-
-                    creep_memory.worker_type = CreepWorkerType::SimpleWorker(creep_task.to_owned());
-
-                    creep_memories.insert(creep.name(), creep_memory);
-                },
-                None => {
-                    info!("Room has no tasks");
-                } 
-            };
+            creep_memories.insert(creep.name(), creep_memory);
         }
 
 
@@ -80,6 +44,50 @@ impl TaskManager {
             structure_memories,
             tasks 
         }
+    }
+
+    fn assign_creep(creep: &Creep, mut memory: CreepMemory, mut tasks: HashMap<String, Vec<Task>>) -> (CreepMemory, HashMap<String, Vec<Task>>){
+        info!("Creep - {:?}", memory);
+
+        let creep_room = &creep.room().unwrap().name().to_string();
+
+        match tasks.get(creep_room) {
+            Some(room_tasks) => {
+                info!("Room has tasks: {:?}", room_tasks);
+                let mut copied_tasks = room_tasks.to_owned();
+                let mut creep_task = copied_tasks.pop().unwrap_or(Task::Idle);
+
+                creep_task = match creep_task {
+                    Task::Idle => Task::Idle,
+                    Task::Harvest { node, mut worked_by, space_limit } => {
+                        worked_by.push(creep.try_id().unwrap());
+
+                        Task::Harvest { node, worked_by, space_limit }
+                    }
+                    Task::Build { site, mut worked_by } => {
+                        worked_by.push(creep.try_id().unwrap());
+
+                        Task::Build { 
+                            site, 
+                            worked_by 
+                        }
+                    },
+                    _ => todo!("Haven't implemented that yet"),
+                };
+
+                copied_tasks.push(creep_task.to_owned());
+
+                tasks.insert(creep_room.to_string(), copied_tasks);
+
+                memory.worker_type = CreepWorkerType::SimpleWorker(creep_task.to_owned());
+
+            },
+            None => {
+                info!("Room has no tasks");
+            } 
+        };
+
+        (memory, tasks)
     }
 
     pub fn scan(&self, mut game_memory: GameMemory) -> GameMemory {
