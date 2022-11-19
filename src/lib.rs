@@ -2,7 +2,7 @@ use std::{collections::HashMap, cell::RefCell, panic};
 
 use js_sys::JsString;
 use log::*;
-use manager::TaskManager;
+use manager::{TaskManager, SpawnManager};
 use screeps::{RawMemory, game, Room};
 
 use wasm_bindgen::prelude::*;
@@ -26,8 +26,10 @@ thread_local! {
 pub fn run_managers(mut memory: GameMemory) -> GameMemory {
     let rooms: Vec<Room> = game::rooms().values().collect();
 
-    memory = TaskManager::with_rooms(rooms).scan(memory);
+    memory = TaskManager::with_rooms(&rooms).scan(memory);
     memory = TaskManager::assign(memory);
+
+    memory = SpawnManager::with_rooms(&rooms).spawn(memory);
 
     memory
 }
@@ -54,7 +56,9 @@ pub fn game_loop() {
     // Serialize and save to memory. This is done separately to avoid weirdness.
     GAME_MEMORY.with(|game_memory_refcell| {
         save_memory(game_memory_refcell.borrow().to_owned());
-    })
+    });
+
+    info!("Game loop finished: {}", game::time());
 }
 
 /**
