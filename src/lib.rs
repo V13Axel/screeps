@@ -28,7 +28,6 @@ thread_local! {
 }
 
 pub fn run_managers(mut memory: GameMemory) -> GameMemory {
-    console::log_1(&JsString::from("<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"));
     let rooms: Vec<Room> = game::rooms()
         .values()
         .collect();
@@ -70,6 +69,10 @@ pub fn game_loop(mut memory: GameMemory) -> GameMemory {
         memory = run_managers(memory);
         memory.ticks_since_managers = 0;
     } else {
+        if memory.ticks_since_managers == 49 {
+            clear_console();
+        }
+
         memory.ticks_since_managers += 1;
     }
 
@@ -116,7 +119,7 @@ fn panic_handler(info: &panic::PanicInfo) {
 // add wasm_bindgen to any function you would like to expose for call from js
 #[wasm_bindgen]
 pub fn setup() {
-    logging::setup_logging(logging::Debug);
+    logging::setup_logging(logging::Info);
     panic::set_hook(Box::new(panic_handler));
     retrieve_memory();
 }
@@ -124,9 +127,11 @@ pub fn setup() {
 pub fn retrieve_memory() {
     GAME_MEMORY.with(|game_memory_refcell| {
         if game_memory_refcell.borrow().needs_deserialized {
+            info!("Global reset detected, memory deserialized");
+
             let memory_string = match RawMemory::get().as_string() {
                 Some(memory) => {
-                    info!("Retrieved memory as: {}", memory);
+                    debug!("Retrieved memory as: {}", memory);
 
                     memory
                 },
@@ -135,7 +140,7 @@ pub fn retrieve_memory() {
 
             let mut deserialized: GameMemory = match serde_json::from_str(&memory_string) {
                 Ok(deserialized) => {
-                    info!("Successfully deserialized memory to: {:?}", deserialized);
+                    debug!("Successfully deserialized memory to: {:?}", deserialized);
 
                     deserialized
                 },
@@ -144,9 +149,9 @@ pub fn retrieve_memory() {
 
             deserialized.needs_deserialized = false;
 
-            info!("Replacing refcell");
+            debug!("Replacing refcell");
             game_memory_refcell.replace(deserialized);
-            info!("Replaced refcell");
+            debug!("Replaced refcell");
         }
     })
 }
@@ -160,7 +165,7 @@ pub fn reset_memory() {
 fn save_memory(game_memory: GameMemory) {
     let stringified = serde_json::to_string(&game_memory);
 
-    // info!("{:?}", &stringified);
+    debug!("{:?}", &stringified);
 
     match stringified {
         Ok(stringified) => RawMemory::set(&JsString::from(stringified)),
@@ -168,3 +173,7 @@ fn save_memory(game_memory: GameMemory) {
     }
 }
 
+// What a crazy hack.
+fn clear_console() {
+    console::log_1(&JsString::from("<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"));
+}

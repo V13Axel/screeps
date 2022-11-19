@@ -28,9 +28,9 @@ impl TaskManager {
                 continue;
             }
 
-            let mut creep_memory: CreepMemory = creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
+            let creep_memory: CreepMemory;
 
-            (creep_memory, tasks) = Self::assign_creep(&creep, creep_memory, tasks);
+            (creep_memory, tasks) = Self::assign_creep(&creep, creep_memories.get(&creep.name()).unwrap_or_default().to_owned(), tasks);
 
             creep_memories.insert(creep.name(), creep_memory);
         }
