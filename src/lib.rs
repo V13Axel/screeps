@@ -70,6 +70,18 @@ pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
     memory
 }
 
+fn clean_up_dead_creeps(game_memory: GameMemory) -> HashMap<String, CreepMemory> {
+    let creeps = game::creeps();
+    let mut new_memory: HashMap<String, CreepMemory> = HashMap::new();
+    for creep_name in game_memory.creep_memories.keys() {
+        if creeps.get(creep_name.to_string()).is_some() {
+            new_memory.insert(creep_name.to_string(), game_memory.creep_memories.get(creep_name).unwrap().to_owned());
+        }
+    }
+
+    new_memory
+}
+
 // to use a reserved name as a function name, use `js_name`:
 #[wasm_bindgen(js_name = loop)]
 pub fn game_loop() {
@@ -77,15 +89,8 @@ pub fn game_loop() {
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
 
-        let creeps = game::creeps();
-        let mut new_memory: HashMap<String, CreepMemory> = HashMap::new();
-        for creep_name in game_memory.creep_memories.keys() {
-            if creeps.get(creep_name.to_string()).is_some() {
-                new_memory.insert(creep_name.to_string(), game_memory.creep_memories.get(creep_name).unwrap().to_owned());
-            }
-        }
 
-        game_memory.creep_memories = new_memory;
+        game_memory.creep_memories = clean_up_dead_creeps(game_memory.to_owned());
 
         game_memory = actual_game_loop(game_memory);
 
