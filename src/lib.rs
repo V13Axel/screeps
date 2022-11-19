@@ -3,8 +3,11 @@ use std::{collections::HashMap, cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 use manager::{TaskManager, SpawnManager};
-use screeps::{RawMemory, game, Room};
+use mem::CreepMemory;
+use role::CreepPurpose;
+use screeps::{RawMemory, game, Room, Creep, SharedCreepProperties};
 
+use task::Task;
 use wasm_bindgen::prelude::*;
 
 use crate::mem::GameMemory;
@@ -24,7 +27,9 @@ thread_local! {
 }
 
 pub fn run_managers(mut memory: GameMemory) -> GameMemory {
-    let rooms: Vec<Room> = game::rooms().values().collect();
+    let rooms: Vec<Room> = game::rooms()
+        .values()
+        .collect();
 
     memory = TaskManager::with_rooms(&rooms).scan(memory);
     memory = TaskManager::assign(memory);
@@ -34,8 +39,30 @@ pub fn run_managers(mut memory: GameMemory) -> GameMemory {
     memory
 }
 
+pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
+    // info!("{:?}\n{:?}", creep.name(), creep_memory);
+    let new_memory = match creep_memory.worker_type {
+        minion::CreepWorkerType::SimpleWorker(ref task) => match task {
+            Task::Idle => creep_memory,
+            Task::Harvest { node, worked_by: _ } => CreepPurpose::harvest(creep, &node, creep_memory.to_owned()),
+            _ => {
+                todo!("Not yet implemented: {:?}", task);
+            }
+        }
+    };
+
+    new_memory
+}
+
 pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
-    memory = run_managers(memory);
+    if game::time() % 50 == 0 {
+        memory = run_managers(memory);
+    }
+
+    for creep in game::creeps().values() {
+        let creep_memory = memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
+        run_creep(&creep, creep_memory);
+    }
 
     memory
 }

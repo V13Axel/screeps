@@ -1,7 +1,7 @@
-use std::{cmp::Ordering, collections::HashMap};
+use std::cmp::Ordering;
 
 use log::info;
-use screeps::{Room, find, HasTypedId, game, Creep, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util};
 
@@ -20,12 +20,12 @@ impl TaskManager {
         let creeps = util::screeps::Screeps::get_idle_screeps(&game_memory);
 
         for creep in creeps {
-            if creep.try_id().is_none() {
+            if creep.spawning() {
                 continue;
             }
 
             let mut creep_memory: CreepMemory = game_memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
-            info!("{:?}", creep_memory);
+            info!("Creep - {:?}", creep_memory);
 
             let creep_room = &creep.room().unwrap().name().to_string();
 
@@ -90,6 +90,17 @@ impl TaskManager {
         });
 
         for source in sources.iter() {
+            let found: Vec<&Task> = room_tasks.iter().filter(|task| {
+                match task {
+                    Task::Harvest { node, worked_by: _ } => node.to_string() == source.id().to_string(),
+                    _ => false
+                }
+            }).collect();
+
+            if found.len() > 0 {
+                continue;
+            }
+
             room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![] });
         }
 
@@ -129,7 +140,7 @@ impl SpawnManager {
         game_memory
     }
 
-    pub fn spawn_if_needed(&self, spawner: StructureSpawn, room_tasks: Vec<Task>) -> Option<(String, CreepMemory)> {
+    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: Vec<Task>) -> Option<(String, CreepMemory)> {
         let room_creeps = spawner.room().unwrap().find(find::MY_CREEPS);
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("Worker{}", game::time());
