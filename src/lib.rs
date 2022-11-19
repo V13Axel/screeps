@@ -54,6 +54,22 @@ pub fn run_creep(creep: &Creep, creep_memory: CreepMemory) -> CreepMemory {
     new_memory
 }
 
+pub fn run_creeps(mut memory: GameMemory) -> GameMemory {
+    let mut new_creep_memories = HashMap::new();
+
+    for creep in game::creeps().values() {
+        let mut creep_memory = memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
+
+        creep_memory = run_creep(&creep, creep_memory);
+
+        new_creep_memories.insert(creep.name().to_string(), creep_memory);
+    }
+
+    memory.creep_memories = new_creep_memories;
+
+    memory
+}
+
 pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
     if memory.ticks_since_managers >= 50 {
         memory = run_managers(memory);
@@ -62,24 +78,9 @@ pub fn actual_game_loop(mut memory: GameMemory) -> GameMemory {
         memory.ticks_since_managers += 1;
     }
 
-    for creep in game::creeps().values() {
-        let creep_memory = memory.creep_memories.get(&creep.name()).unwrap_or_default().to_owned();
-        run_creep(&creep, creep_memory);
-    }
+    memory = run_creeps(memory);
 
     memory
-}
-
-fn clean_up_dead_creeps(game_memory: GameMemory) -> HashMap<String, CreepMemory> {
-    let creeps = game::creeps();
-    let mut new_memory: HashMap<String, CreepMemory> = HashMap::new();
-    for creep_name in game_memory.creep_memories.keys() {
-        if creeps.get(creep_name.to_string()).is_some() {
-            new_memory.insert(creep_name.to_string(), game_memory.creep_memories.get(creep_name).unwrap().to_owned());
-        }
-    }
-
-    new_memory
 }
 
 // to use a reserved name as a function name, use `js_name`:
@@ -88,9 +89,6 @@ pub fn game_loop() {
     // Get our local heap memory and do the actual game logic
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
-
-
-        game_memory.creep_memories = clean_up_dead_creeps(game_memory.to_owned());
 
         game_memory = actual_game_loop(game_memory);
 
