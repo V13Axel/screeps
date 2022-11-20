@@ -209,5 +209,13 @@ fn clear_console() {
 }
 
 fn clean_up_dead_creeps(game_memory: &mut GameMemory) {
-    game_memory.creeps.retain(|name, _| game::creeps().values().map(|creep| creep.name()).collect::<Vec<String>>().contains(name));
+    game_memory.creeps.retain(
+        |name, _| game::creeps()
+            .values()
+            .map(
+                |creep| creep.name()
+            )
+            .collect::<Vec<String>>()
+            .contains(name)
+    );
 }
