@@ -41,6 +41,15 @@ pub fn run_managers(mut memory: GameMemory) -> GameMemory {
 }
 
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
+    info!("Running {:?}", creep.name());
+    if memory.current_path.is_some() {
+        let path = memory.current_path.to_owned().unwrap();
+        memory.current_path = match creep.move_by_path(&JsValue::from_str(&path.value)) {
+            screeps::ReturnCode::Ok => Some(path),
+            _ => None
+        }
+    }
+
     let worker_type = memory.worker_type.to_owned();
 
     match worker_type {

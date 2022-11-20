@@ -12,7 +12,11 @@ pub struct CreepPurpose {
 
 impl CreepPurpose {
     pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
-        Self::move_near(creep, creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), memory);
+        Self::move_near(
+            creep, 
+            creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), 
+            memory
+        );
     }
 
     // Gets you to the position
@@ -51,26 +55,28 @@ impl CreepPurpose {
 
         let result = creep.move_by_path(&JsValue::from_str(&path.value));
 
-        // info!("{:?} - {:?}", path, result);
+        info!("-------\nMovement return code - {:?}\nPath - {:?}",  result, path);
 
         match result {
             ReturnCode::Ok => { 
                 Some(path) 
             },
             _ => {
-                info!("-------\nMovement return code - {:?}\nPath - {:?}",  result, path);
                 None
             }
         }
     }
 
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
+        info!("Trying to upgrade");
         let keep_job = if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
+            info!("Creep has energy");
             match controller_id.resolve() {
                 Some(controller) => {
+                    info!("Controller found");
                     let r = creep.upgrade_controller(&controller);
                     if r == ReturnCode::NotInRange {
-                        // creep.move_to(&controller);
+                        info!("Trying to move closer to controller");
                         Self::move_near(creep, controller.pos(), memory);
                         true
                     } else if r != ReturnCode::Ok {
@@ -80,14 +86,20 @@ impl CreepPurpose {
                         true
                     }
                 }
-                None => false,
+                None => {
+                    info!("No controller found. ... what?");
+
+                    false
+                },
             }
         } else {
+            info!("Energy is empty");
             false
         };
 
         if !keep_job {
             let node = creep.room().unwrap().find(find::SOURCES)[0].id();
+            memory.current_path = None;
             memory.worker_type = CreepWorkerType::SimpleWorker(Task::Harvest { node , worked_by: vec![], space_limit: 0 });
         }
     }
@@ -127,6 +139,7 @@ impl CreepPurpose {
 
         if !keep_job {
             debug!("{} not keeping job", creep.name());
+            memory.current_path = None;
             memory.worker_type = CreepWorkerType::SimpleWorker(Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] });
         }
     }
