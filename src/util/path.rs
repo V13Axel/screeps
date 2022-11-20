@@ -1,33 +1,38 @@
 use js_sys::Array;
-use log::info;
-use screeps::{Position, RoomPosition};
+
+use screeps::{Position, Room};
 use serde::{Serialize, Deserialize};
+use serde_wasm_bindgen::to_value;
+use wasm_bindgen::JsValue;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CreepPath {
-    pub steps: Vec<Position>
+    pub value: String
 }
 
 impl From<Vec<Position>> for CreepPath {
     fn from(steps: Vec<Position>) -> Self {
+        let positions = Array::new();
+        for position in steps.iter() {
+            positions.push(&to_value(position).unwrap());
+        }
+
         CreepPath {
-            steps 
+            value: Room::serialize_path(&positions).into()
         }
     }
 }
 
 impl From<Array> for CreepPath {
     fn from(steps: Array) -> Self {
-        let mut positions = vec![];
-        for step in steps.values() {
-            let room_position = RoomPosition::from(step.unwrap());
-            let position_version = Position::from(room_position);
-
-            positions.push(position_version);
-        }
-
         Self {
-            steps: positions
+            value: Room::serialize_path(&steps).into()
         }
+    }
+}
+
+impl Into<JsValue> for CreepPath {
+    fn into(self) -> JsValue {
+        JsValue::from_str(&self.value)
     }
 }

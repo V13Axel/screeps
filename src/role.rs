@@ -1,6 +1,6 @@
-use log::{warn, info};
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, Position, RoomPosition, Find, find, game, HasTypedId};
-use serde_wasm_bindgen::to_value;
+use log::{warn, info, debug};
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, HasTypedId, Position};
+use wasm_bindgen::JsValue;
 
 use crate::{util::path::CreepPath, mem::CreepMemory, minion::CreepWorkerType, task::Task};
 
@@ -11,95 +11,67 @@ pub struct CreepPurpose {
 }
 
 impl CreepPurpose {
-    pub fn idle(creep: &Creep, mut memory: CreepMemory) -> CreepMemory {
-        Self::move_near(creep, RoomPosition::from(creep.room().unwrap().find(find::MY_SPAWNS)[0].pos()), &mut memory);
-        // creep.move_to(&creep.room().unwrap().find(find::MY_SPAWNS)[0]);
-
-        memory
+    pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
+        Self::move_near(creep, creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), memory);
     }
+
     // Gets you to the position
-    pub fn move_to<'a>(creep: &Creep, position: RoomPosition, mut memory: &'a mut CreepMemory) -> &'a CreepMemory {
-        memory.current_path = if creep.pos().is_near_to(position.to_owned().into()) {
+    #[allow(dead_code)]
+    pub fn move_to(creep: &Creep, position: Position, mut memory: &mut CreepMemory) { 
+        memory.current_path = if creep.pos().is_equal_to(position) {
             None
         } else {
             Self::do_movement(creep, &position, &memory.current_path)
         };
-
-        info!("{:?}", memory);
-
-        memory
     }
     
     // Gets you next to the position
-    pub fn move_near<'a>(creep: &Creep, position: RoomPosition, mut memory: &'a mut CreepMemory) -> &'a CreepMemory {
-        memory.current_path = if creep.pos().is_near_to(position.to_owned().into()) {
+    pub fn move_near(creep: &Creep, position: Position, memory: &mut CreepMemory) {
+        memory.current_path = if creep.pos().is_near_to(position) {
             None
         } else {
             Self::do_movement(creep, &position, &memory.current_path)
         };
-
-        memory
     }
 
-    fn do_movement(creep: &Creep, position: &RoomPosition, current_path: &Option<CreepPath>) -> Option<CreepPath> {
-        let room = creep.room().unwrap();
-        let path = room.find_path(
-            &RoomPosition::from(creep.pos()), 
-            &RoomPosition::from(room.find(find::MY_SPAWNS)[0].pos()),
-            None
-        );
+    fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>) -> Option<CreepPath> {
+        let path = match current_path {
+            Some(path) => path.to_owned(),
+            None => {
+                CreepPath::from(creep.room()
+                    .unwrap()
+                    .find_path(
+                        &RoomPosition::from(creep.pos()), 
+                        &RoomPosition::from(position), 
+                        None
+                    )
+                )
+            }
+        };
 
-        info!("{:?}", path);
+        let result = creep.move_by_path(&JsValue::from_str(&path.value));
 
-        creep.move_by_path(&path); // -> InvalidArgs
+        // info!("{:?} - {:?}", path, result);
 
-        None
-        // let path = match current_path {
-        //     Some(path) => path.to_owned(),
-        //     None => {
-        //         info!("{:?}", creep.room()
-        //             .unwrap()
-        //             .find_path(
-        //                 &RoomPosition::from(creep.pos()), 
-        //                 &position, 
-        //                 None
-        //             )
-        //         );
-        //         CreepPath::from(creep.room()
-        //             .unwrap()
-        //             .find_path(
-        //                 &RoomPosition::from(creep.pos()), 
-        //                 &position, 
-        //                 None
-        //             )
-        //         )
-        //     }
-        // };
-        //
-        // let path_serialized = to_value(&path).unwrap();
-        //
-        //
-        // let result = creep.move_by_path(&path_serialized);
-        //
-        // match result {
-        //     ReturnCode::Ok => { 
-        //         Some(path) 
-        //     },
-        //     _ => {
-        //         info!("-------\nMovement return code - {:?}\nPath - {:?}\nPath ser - {:?}",  result, path, path_serialized);
-        //         None
-        //     }
-        // }
+        match result {
+            ReturnCode::Ok => { 
+                Some(path) 
+            },
+            _ => {
+                info!("-------\nMovement return code - {:?}\nPath - {:?}",  result, path);
+                None
+            }
+        }
     }
 
-    pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, mut memory: CreepMemory) -> CreepMemory {
+    pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
         let keep_job = if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
             match controller_id.resolve() {
                 Some(controller) => {
                     let r = creep.upgrade_controller(&controller);
                     if r == ReturnCode::NotInRange {
                         // creep.move_to(&controller);
-                        Self::move_to(creep, controller.pos().into(), &mut memory);
+                        Self::move_near(creep, controller.pos(), memory);
                         true
                     } else if r != ReturnCode::Ok {
                         warn!("couldn't upgrade: {:?}", r);
@@ -118,15 +90,17 @@ impl CreepPurpose {
             let node = creep.room().unwrap().find(find::SOURCES)[0].id();
             memory.worker_type = CreepWorkerType::SimpleWorker(Task::Harvest { node , worked_by: vec![], space_limit: 0 });
         }
-
-        memory
     }
 
-    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, mut memory: CreepMemory) -> CreepMemory {
+    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) { 
+        info!("Trying to harvest");
         let keep_job = if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
+            info!("Creep {:?} has some empty space", creep.name());
             let source = match source_id.resolve() {
                 Some(source) => {
+                    info!("Source found");
                     if creep.pos().is_near_to(source.pos()) {
+                        info!("Creep is near source");
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
                             info!("couldn't harvest: {:?}", r);
@@ -135,8 +109,10 @@ impl CreepPurpose {
                             true
                         }
                     } else {
-                        // creep.move_to(&source);
-                        Self::move_to(creep, source.pos().into(), &mut memory);
+                        let result = creep.pos().is_near_to(source.pos());
+                        let range = creep.pos().get_range_to(source.pos());
+                        info!("Moving to source, got {:?}, range {:?}", result, range);
+                        Self::move_near(creep, source.pos(), memory);
                         true
                     }
                 }
@@ -145,14 +121,13 @@ impl CreepPurpose {
 
             source
         } else {
+            info!("Creep is full");
             false
         };
 
         if !keep_job {
-            info!("{} not keeping job", creep.name());
+            debug!("{} not keeping job", creep.name());
             memory.worker_type = CreepWorkerType::SimpleWorker(Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] });
         }
-
-        memory
     }
 }

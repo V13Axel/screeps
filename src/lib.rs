@@ -40,14 +40,17 @@ pub fn run_managers(mut memory: GameMemory) -> GameMemory {
     memory
 }
 
-pub fn run_creep(creep: &Creep, memory: CreepMemory) -> CreepMemory {
-    match memory.worker_type {
-        minion::CreepWorkerType::SimpleWorker(ref task) => {
+pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
+    let worker_type = memory.worker_type.to_owned();
+
+    match worker_type {
+        minion::CreepWorkerType::SimpleWorker(task) => {
             match task {
-                Task::Idle => CreepPurpose::idle(creep, memory.to_owned()),
-                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory.to_owned()),
-                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, controller, memory.to_owned()),
+                Task::Idle => CreepPurpose::idle(creep, memory),
+                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
+                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
                 _ => {
+                    info!("Got a task I wasn't expecting {:?}", task);
                     todo!("Not yet implemented: {:?}", task);
                 }
             }     
@@ -55,13 +58,12 @@ pub fn run_creep(creep: &Creep, memory: CreepMemory) -> CreepMemory {
     }
 }
 
-pub fn run_creeps(creep_memories: HashMap<String, CreepMemory>) -> HashMap<String, CreepMemory> {
-    game::creeps().values().map(|creep| {
-        (
-            creep.name(),
-            run_creep(&creep, creep_memories.get(&creep.name()).unwrap_or_default().to_owned())
-        )
-    }).collect()
+pub fn run_creeps(creep_memories: &mut HashMap<String, CreepMemory>) {
+    for creep in game::creeps().values() {
+        let name = creep.name();
+        let memory = creep_memories.entry(name).or_default();
+        run_creep(&creep, memory);
+    }
 }
 
 pub fn game_loop(mut memory: GameMemory) -> GameMemory {
@@ -76,7 +78,7 @@ pub fn game_loop(mut memory: GameMemory) -> GameMemory {
         memory.ticks_since_managers += 1;
     }
 
-    memory.creep_memories = run_creeps(memory.creep_memories);
+    run_creeps(&mut memory.creep_memories);
 
     memory
 }
