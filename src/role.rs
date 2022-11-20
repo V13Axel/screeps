@@ -1,5 +1,5 @@
-use log::{warn, info, debug};
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, HasTypedId, Position};
+use log::{warn, debug};
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, HasTypedId, Position, Transferable, ConstructionSite};
 use wasm_bindgen::JsValue;
 
 use crate::{util::path::CreepPath, mem::CreepMemory, minion::CreepWorkerType, task::Task};
@@ -38,6 +38,14 @@ impl CreepPurpose {
         };
     }
 
+    pub fn deposit(creep: &Creep, dest: &impl Transferable, memory: &mut CreepMemory) {
+        if creep.pos().is_near_to(dest.pos()) {
+            creep.transfer(dest, ResourceType::Energy, None);
+        } else {
+            Self::move_near(creep, dest.pos(), memory)
+        }
+    }
+
     fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>) -> Option<CreepPath> {
         let path = match current_path {
             Some(path) => path.to_owned(),
@@ -55,7 +63,7 @@ impl CreepPurpose {
 
         let result = creep.move_by_path(&JsValue::from_str(&path.value));
 
-        info!("-------\nMovement return code - {:?}\nPath - {:?}",  result, path);
+        debug!("-------\nMovement return code - {:?}\nPath - {:?}",  result, path);
 
         match result {
             ReturnCode::Ok => { 
@@ -68,15 +76,15 @@ impl CreepPurpose {
     }
 
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
-        info!("Trying to upgrade");
+        debug!("Trying to upgrade");
         let keep_job = if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
-            info!("Creep has energy");
+            debug!("Creep has energy");
             match controller_id.resolve() {
                 Some(controller) => {
-                    info!("Controller found");
+                    debug!("Controller found");
                     let r = creep.upgrade_controller(&controller);
                     if r == ReturnCode::NotInRange {
-                        info!("Trying to move closer to controller");
+                        debug!("Trying to move closer to controller");
                         Self::move_near(creep, controller.pos(), memory);
                         true
                     } else if r != ReturnCode::Ok {
@@ -87,13 +95,13 @@ impl CreepPurpose {
                     }
                 }
                 None => {
-                    info!("No controller found. ... what?");
+                    debug!("No controller found. ... what?");
 
                     false
                 },
             }
         } else {
-            info!("Energy is empty");
+            debug!("Energy is empty");
             false
         };
 
@@ -105,17 +113,17 @@ impl CreepPurpose {
     }
 
     pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) { 
-        info!("Trying to harvest");
+        debug!("Trying to harvest");
         let keep_job = if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
-            info!("Creep {:?} has some empty space", creep.name());
+            debug!("Creep {:?} has some empty space", creep.name());
             let source = match source_id.resolve() {
                 Some(source) => {
-                    info!("Source found");
+                    debug!("Source found");
                     if creep.pos().is_near_to(source.pos()) {
-                        info!("Creep is near source");
+                        debug!("Creep is near source");
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
-                            info!("couldn't harvest: {:?}", r);
+                            debug!("couldn't harvest: {:?}", r);
                             false
                         } else {
                             true
@@ -123,7 +131,7 @@ impl CreepPurpose {
                     } else {
                         let result = creep.pos().is_near_to(source.pos());
                         let range = creep.pos().get_range_to(source.pos());
-                        info!("Moving to source, got {:?}, range {:?}", result, range);
+                        debug!("Moving to source, got {:?}, range {:?}", result, range);
                         Self::move_near(creep, source.pos(), memory);
                         true
                     }
@@ -133,7 +141,7 @@ impl CreepPurpose {
 
             source
         } else {
-            info!("Creep is full");
+            debug!("Creep is full");
             false
         };
 
@@ -141,6 +149,14 @@ impl CreepPurpose {
             debug!("{} not keeping job", creep.name());
             memory.current_path = None;
             memory.worker_type = CreepWorkerType::SimpleWorker(Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] });
+        }
+    }
+
+    pub fn build(creep: &Creep, site: &ConstructionSite, memory: &mut CreepMemory) {
+        if creep.pos().is_near_to(site.pos()) {
+            creep.build(&site);
+        } else {
+            Self::move_near(creep, site.pos(), memory);
         }
     }
 }

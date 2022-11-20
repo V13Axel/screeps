@@ -39,7 +39,7 @@ pub fn run_managers(memory: &mut GameMemory) {
 }
 
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
-    info!("Running {:?}", creep.name());
+    debug!("Running {:?}", creep.name());
     if memory.current_path.is_some() {
         let path = memory.current_path.to_owned().unwrap();
         memory.current_path = match creep.move_by_path(&JsValue::from_str(&path.value)) {
@@ -53,22 +53,23 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
     match worker_type {
         minion::CreepWorkerType::SimpleWorker(task) => {
             match task {
-                Task::Idle => CreepPurpose::idle(creep, memory),
                 Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
                 Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
+                Task::Deposit { dest, .. } => CreepPurpose::deposit(creep, &dest.resolve().unwrap(), memory),
+                Task::Build { site, .. } => CreepPurpose::build(creep, &site.resolve().unwrap(), memory),
                 _ => {
-                    info!("Got a task I wasn't expecting {:?}", task);
-                    todo!("Not yet implemented: {:?}", task);
+                    // Basically ... If it's not one of the above, we'll just skip it
+                    CreepPurpose::idle(creep, memory)
                 }
             }     
         }
     }
 }
 
-pub fn run_creeps(creep_memories: &mut HashMap<String, CreepMemory>) {
+pub fn run_creeps(memories: &mut HashMap<String, CreepMemory>) {
     for creep in game::creeps().values() {
         let name = creep.name();
-        let memory = creep_memories.entry(name).or_default();
+        let memory = memories.entry(name).or_default();
         run_creep(&creep, memory);
     }
 }
@@ -76,13 +77,14 @@ pub fn run_creeps(creep_memories: &mut HashMap<String, CreepMemory>) {
 pub fn game_loop(memory: &mut GameMemory) {
     if memory.ticks_since_managers >= 50 {
         run_managers(memory);
+
         memory.ticks_since_managers = 0;
     } else {
-        if memory.ticks_since_managers == 49 {
-            clear_console();
-        }
-
         memory.ticks_since_managers += 1;
+    }
+
+    if memory.ticks_since_managers == 49 {
+        clear_console();
     }
 
     run_creeps(&mut memory.creep_memories);
