@@ -51,8 +51,8 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
     let worker_type = memory.worker_type.to_owned();
 
     match worker_type {
-        minion::CreepWorkerType::SimpleWorker(task) => {
-            match task {
+        minion::CreepWorkerType::SimpleWorker => {
+            match memory.current_task {
                 Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
                 Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
                 Task::Deposit { dest, .. } => CreepPurpose::deposit(creep, &dest.resolve().unwrap(), memory),
@@ -62,6 +62,19 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
                     CreepPurpose::idle(creep, memory)
                 }
             }     
+        },
+        minion::CreepWorkerType::Upgrader => {
+            match memory.current_task {
+                Task::Idle =>  CreepPurpose::idle(creep, memory),
+                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
+                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
+                _ => {
+                    CreepPurpose::idle(creep, memory);
+                }
+            }
+        },
+        minion::CreepWorkerType::Harvester => {
+
         }
     }
 }
@@ -87,7 +100,7 @@ pub fn game_loop(memory: &mut GameMemory) {
         clear_console();
     }
 
-    run_creeps(&mut memory.creep_memories);
+    run_creeps(&mut memory.creeps);
 }
 
 // to use a reserved name as a function name, use `js_name`:

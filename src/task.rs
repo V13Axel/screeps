@@ -12,3 +12,4 @@ pub enum Task {
     SpawnCreep { minimum_body: Vec<Part>, memory: Box<Option<CreepMemory>> },
     Idle,
 }
+

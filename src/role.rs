@@ -1,4 +1,4 @@
-use log::{warn, debug};
+use log::{warn, debug, info};
 use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, HasTypedId, Position, Transferable, ConstructionSite};
 use wasm_bindgen::JsValue;
 
@@ -38,13 +38,6 @@ impl CreepPurpose {
         };
     }
 
-    pub fn deposit(creep: &Creep, dest: &impl Transferable, memory: &mut CreepMemory) {
-        if creep.pos().is_near_to(dest.pos()) {
-            creep.transfer(dest, ResourceType::Energy, None);
-        } else {
-            Self::move_near(creep, dest.pos(), memory)
-        }
-    }
 
     fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>) -> Option<CreepPath> {
         let path = match current_path {
@@ -108,7 +101,8 @@ impl CreepPurpose {
         if !keep_job {
             let node = creep.room().unwrap().find(find::SOURCES)[0].id();
             memory.current_path = None;
-            memory.worker_type = CreepWorkerType::SimpleWorker(Task::Harvest { node , worked_by: vec![], space_limit: 0 });
+            memory.current_task = Task::Harvest { node , worked_by: vec![], space_limit: 0 };
+            memory.worker_type = CreepWorkerType::SimpleWorker;
         }
     }
 
@@ -148,15 +142,40 @@ impl CreepPurpose {
         if !keep_job {
             debug!("{} not keeping job", creep.name());
             memory.current_path = None;
-            memory.worker_type = CreepWorkerType::SimpleWorker(Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] });
+            memory.current_task = Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] };
+            memory.worker_type = CreepWorkerType::SimpleWorker;
         }
     }
 
     pub fn build(creep: &Creep, site: &ConstructionSite, memory: &mut CreepMemory) {
         if creep.pos().is_near_to(site.pos()) {
-            creep.build(&site);
+            memory.current_task = match creep.build(&site) {
+                ReturnCode::Ok => Task::Idle,
+                code => {
+                    info!("{:?} - Building code {:?}", creep.name(), code);
+                
+                    memory.current_task.to_owned()
+                }
+            }
         } else {
             Self::move_near(creep, site.pos(), memory);
+        }
+    }
+
+    pub fn deposit(creep: &Creep, dest: &impl Transferable, memory: &mut CreepMemory) {
+        if creep.pos().is_near_to(dest.pos()) {
+            memory.current_path = None;
+
+            match creep.transfer(dest, ResourceType::Energy, None) {
+                ReturnCode::Ok => {
+                    memory.current_task = Task::Idle;
+                },
+                code => {
+                    info!("{:?}", code);
+                }
+            }
+        } else {
+            Self::move_near(creep, dest.pos(), memory)
         }
     }
 }

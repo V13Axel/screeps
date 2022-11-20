@@ -10,7 +10,7 @@ use crate::{minion::CreepWorkerType, task::Task, util::path::CreepPath};
 pub struct GameMemory {
     pub ticks_since_managers: usize,
     pub needs_deserialized: bool,
-    pub creep_memories: HashMap<String, CreepMemory>,
+    pub creeps: HashMap<String, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
     pub tasks: HashMap<String, Vec<Task>>,
@@ -21,7 +21,7 @@ impl GameMemory {
         GameMemory { 
             needs_deserialized: true,
             ticks_since_managers: 9999,
-            creep_memories: HashMap::new(),
+            creeps: HashMap::new(),
             room_memories: HashMap::new(),
             structure_memories: HashMap::new(),
             tasks: HashMap::new()
@@ -58,15 +58,15 @@ pub struct ControllerMemory {
 pub struct CreepMemory {
     pub worker_type: CreepWorkerType,
     pub current_path: Option<CreepPath>,
+    pub current_task: Task,
 }
 
 impl Default for CreepMemory {
     fn default() -> CreepMemory {
         CreepMemory {
-            worker_type: CreepWorkerType::SimpleWorker(
-                Task::Idle
-            ),
-            current_path: None
+            worker_type: CreepWorkerType::SimpleWorker,
+            current_path: None,
+            current_task: Task::Idle,
         }
     }
 }
@@ -74,10 +74,9 @@ impl Default for CreepMemory {
 impl Default for &CreepMemory {
     fn default() -> &'static CreepMemory {
         &CreepMemory {
-            worker_type: CreepWorkerType::SimpleWorker(
-                Task::Idle
-            ),
-            current_path: None
+            worker_type: CreepWorkerType::SimpleWorker,
+            current_path: None,
+            current_task: Task::Idle,
         }
     }
 }

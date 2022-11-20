@@ -29,7 +29,7 @@ impl TaskManager {
 
             Self::assign_creep(
                 &creep,
-                &mut game_memory.creep_memories.entry(creep.name()).or_default(),
+                &mut game_memory.creeps.entry(creep.name()).or_default(),
                 &mut game_memory.tasks
             );
         }
@@ -68,7 +68,8 @@ impl TaskManager {
 
                 tasks.insert(creep_room.to_string(), copied_tasks);
 
-                memory.worker_type = CreepWorkerType::SimpleWorker(creep_task.to_owned());
+                memory.current_task = creep_task.to_owned();
+                memory.worker_type = CreepWorkerType::SimpleWorker;
 
             },
             None => {
@@ -96,6 +97,7 @@ impl TaskManager {
             }
         });
 
+        // Sources to harvest
         for source in sources.iter() {
             let found: Vec<&Task> = room_tasks.iter().filter(|task| {
                 match task {
@@ -110,6 +112,20 @@ impl TaskManager {
 
             room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit: 2 });
         }
+        
+        // // Controller to upgrade
+        // let upgrade_tasks = room_tasks.iter().filter(|task| {
+        //     match task {
+        //         Task::Upgrade { .. } => true,
+        //         _ => false,
+        //     }
+        // }).collect::<Vec<&Task>>();
+        //
+        // info!("{:?}", upgrade_tasks);
+        //
+        // if upgrade_tasks.len() < 1 {
+        //     room_tasks.push(Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] });
+        // }
 
         room_tasks
     }
@@ -140,7 +156,7 @@ impl SpawnManager {
 
             if result.is_some() {
                 let (creep_name, creep_memory) = result.unwrap();
-                game_memory.creep_memories.insert(creep_name, creep_memory);
+                game_memory.creeps.insert(creep_name, creep_memory);
             }
         }
     }
