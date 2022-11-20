@@ -80,15 +80,18 @@ impl TaskManager {
 
     pub fn scan(&self, game_memory: &mut GameMemory) {
         for room in self.rooms.iter() {
-            game_memory.tasks.insert(room.name().to_string(), self.scan_room(&room));
+            let tasks = game_memory.tasks.entry(
+                room.name().to_string()
+            ).or_default();
+            self.scan_room(&room, tasks);
         }
     }
 
-    pub fn scan_room(&self, room: &Room) -> Vec<Task> {
-        let mut room_tasks: Vec<Task> = vec![];
+    pub fn scan_room(&self, room: &Room, tasks: &mut Vec<Task>) {
         let spawn = &room.find(find::MY_SPAWNS)[0];
 
         let mut sources = room.find(find::SOURCES);
+
         sources.sort_by(|a, b| {
             if spawn.pos().get_range_to(a) > spawn.pos().get_range_to(b) {
                 Ordering::Less
@@ -99,7 +102,7 @@ impl TaskManager {
 
         // Sources to harvest
         for source in sources.iter() {
-            let found: Vec<&Task> = room_tasks.iter().filter(|task| {
+            let found: Vec<&Task> = tasks.iter().filter(|task| {
                 match task {
                     Task::Harvest { node, worked_by: _, space_limit: _ } => node.to_string() == source.id().to_string(),
                     _ => false
@@ -110,7 +113,7 @@ impl TaskManager {
                 continue;
             }
 
-            room_tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit: 2 });
+            tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit: 2 });
         }
         
         // // Controller to upgrade
@@ -126,8 +129,6 @@ impl TaskManager {
         // if upgrade_tasks.len() < 1 {
         //     room_tasks.push(Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] });
         // }
-
-        room_tasks
     }
 }
 
@@ -166,6 +167,7 @@ impl SpawnManager {
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("Worker{}", game::time());
 
+        parts.push(Part::Move);
         parts.push(Part::Move);
         parts.push(Part::Carry);
         parts.push(Part::Work);

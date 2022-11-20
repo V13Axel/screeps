@@ -74,7 +74,12 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
             }
         },
         minion::CreepWorkerType::Harvester => {
-
+            match memory.current_task {
+                Task::Idle => CreepPurpose::idle(creep, memory),
+                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
+                Task::Deposit { dest, .. } => CreepPurpose::deposit(creep, &dest.resolve().unwrap(), memory),
+                _ => CreepPurpose::idle(creep, memory),
+            }
         }
     }
 }
@@ -109,6 +114,9 @@ pub fn memory_loop() {
     // Get our local heap memory and do the actual game logic
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
+
+        clean_up_dead_creeps(&mut game_memory);
+
         game_loop(&mut game_memory);
 
         // Persist to memory refcell after game logic executes
@@ -198,4 +206,8 @@ fn save_memory(game_memory: GameMemory) {
 // What a crazy hack.
 fn clear_console() {
     console::log_1(&JsString::from("<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"));
+}
+
+fn clean_up_dead_creeps(game_memory: &mut GameMemory) {
+    game_memory.creeps.retain(|name, _| game::creeps().values().map(|creep| creep.name()).collect::<Vec<String>>().contains(name));
 }
