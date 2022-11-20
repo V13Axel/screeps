@@ -27,17 +27,15 @@ thread_local! {
     );
 }
 
-pub fn run_managers(mut memory: GameMemory) -> GameMemory {
+pub fn run_managers(memory: &mut GameMemory) {
     let rooms: Vec<Room> = game::rooms()
         .values()
         .collect();
 
-    memory = TaskManager::with_rooms(&rooms).scan(memory);
-    memory = TaskManager::assign(memory);
+    TaskManager::with_rooms(&rooms).scan(memory);
+    TaskManager::assign(memory);
 
-    memory = SpawnManager::with_rooms(&rooms).spawn(memory);
-
-    memory
+    SpawnManager::with_rooms(&rooms).spawn(memory);
 }
 
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
@@ -75,9 +73,9 @@ pub fn run_creeps(creep_memories: &mut HashMap<String, CreepMemory>) {
     }
 }
 
-pub fn game_loop(mut memory: GameMemory) -> GameMemory {
+pub fn game_loop(memory: &mut GameMemory) {
     if memory.ticks_since_managers >= 50 {
-        memory = run_managers(memory);
+        run_managers(memory);
         memory.ticks_since_managers = 0;
     } else {
         if memory.ticks_since_managers == 49 {
@@ -88,8 +86,6 @@ pub fn game_loop(mut memory: GameMemory) -> GameMemory {
     }
 
     run_creeps(&mut memory.creep_memories);
-
-    memory
 }
 
 // to use a reserved name as a function name, use `js_name`:
@@ -98,7 +94,7 @@ pub fn memory_loop() {
     // Get our local heap memory and do the actual game logic
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
-        game_memory = game_loop(game_memory);
+        game_loop(&mut game_memory);
 
         // Persist to memory refcell after game logic executes
         game_memory_refcell.replace(game_memory);

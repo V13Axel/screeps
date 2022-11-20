@@ -19,34 +19,23 @@ impl TaskManager {
         }
     }
 
-    pub fn assign(game_memory: GameMemory) -> GameMemory {
+    pub fn assign(game_memory: &mut GameMemory) {
         let creeps = util::screeps::Screeps::get_idle_screeps(&game_memory);
-        let GameMemory { mut creep_memories, mut tasks, ticks_since_managers, structure_memories, room_memories, needs_deserialized } = game_memory;
 
         for creep in creeps {
             if creep.spawning() {
                 continue;
             }
 
-            let creep_memory: CreepMemory;
-
-            (creep_memory, tasks) = Self::assign_creep(&creep, creep_memories.get(&creep.name()).unwrap_or_default().to_owned(), tasks);
-
-            creep_memories.insert(creep.name(), creep_memory);
+            Self::assign_creep(
+                &creep,
+                &mut game_memory.creep_memories.entry(creep.name()).or_default(),
+                &mut game_memory.tasks
+            );
         }
+}
 
-
-        GameMemory { 
-            ticks_since_managers,
-            needs_deserialized,
-            creep_memories,
-            room_memories,
-            structure_memories,
-            tasks 
-        }
-    }
-
-    fn assign_creep(creep: &Creep, mut memory: CreepMemory, mut tasks: HashMap<String, Vec<Task>>) -> (CreepMemory, HashMap<String, Vec<Task>>){
+    fn assign_creep(creep: &Creep, memory: &mut CreepMemory, tasks: &mut HashMap<String, Vec<Task>>) {
         info!("Creep - {:?}", memory);
 
         let creep_room = &creep.room().unwrap().name().to_string();
@@ -86,16 +75,12 @@ impl TaskManager {
                 info!("Room has no tasks");
             } 
         };
-
-        (memory, tasks)
     }
 
-    pub fn scan(&self, mut game_memory: GameMemory) -> GameMemory {
+    pub fn scan(&self, game_memory: &mut GameMemory) {
         for room in self.rooms.iter() {
             game_memory.tasks.insert(room.name().to_string(), self.scan_room(&room));
         }
-
-        game_memory
     }
 
     pub fn scan_room(&self, room: &Room) -> Vec<Task> {
@@ -146,7 +131,7 @@ impl SpawnManager {
     }
 
 
-    pub fn spawn(&self, mut game_memory: GameMemory) -> GameMemory {
+    pub fn spawn(&self, game_memory: &mut GameMemory) {
         for spawner in self.spawners.iter() {
             info!("Running spawner {}", spawner.name().to_string());
             let id = spawner.room().unwrap().name();
@@ -158,8 +143,6 @@ impl SpawnManager {
                 game_memory.creep_memories.insert(creep_name, creep_memory);
             }
         }
-
-        game_memory
     }
 
     pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: Vec<Task>) -> Option<(String, CreepMemory)> {
