@@ -3,7 +3,7 @@ use std::{cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 
-use screeps::{RawMemory, game, SharedCreepProperties};
+use screeps::{RawMemory, game};
 
 use wasm_bindgen::prelude::*;
 
@@ -36,6 +36,17 @@ pub fn game_loop(memory: &mut GameMemory) {
     minion::run_creeps(&mut memory.creeps);
 }
 
+/**
+* 
+*   Setup/memory management stuff
+*   -----------------------------
+*   What this does is deserialize
+*   RawMemory when & if necessary
+*   otherwise just gives the loop
+*   a mutable borrowed GameMemory
+*
+*/
+
 // to use a reserved name as a function name, use `js_name`:
 #[wasm_bindgen(js_name = loop)]
 pub fn memory_loop() {
@@ -60,17 +71,6 @@ pub fn memory_loop() {
     debug!("Game loop finished: {}", game::time());
 }
 
-/**
-* 
-*   Setup/memory management stuff
-*
-*/
-
-fn panic_handler(info: &panic::PanicInfo) {
-    error!("{:?}", info.to_string());
-}
-
-
 // add wasm_bindgen to any function you would like to expose for call from js
 #[wasm_bindgen]
 pub fn setup() {
@@ -79,6 +79,11 @@ pub fn setup() {
     retrieve_memory();
 }
 
+fn panic_handler(info: &panic::PanicInfo) {
+    error!("{:?}", info.to_string());
+}
+
+// Basically just deserializes memory if necessary
 pub fn retrieve_memory() {
     GAME_MEMORY.with(|game_memory_refcell| {
         if game_memory_refcell.borrow().needs_deserialized {
@@ -111,12 +116,15 @@ pub fn retrieve_memory() {
     })
 }
 
+// There aren't any real situations I can think of where this would _need_ to happen...
+// But if it does, I want to have it handy.
 pub fn reset_memory() {
     GAME_MEMORY.with(|game_memory_refcell| {
         game_memory_refcell.replace(GameMemory::default());
     })
 }
 
+// Serializes GameMemory and saves it to RawMemory
 fn save_memory(game_memory: GameMemory) {
     let stringified = serde_json::to_string(&game_memory);
 

@@ -1,22 +1,33 @@
 use std::{cmp::Ordering, collections::HashMap};
 
-use log::info;
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep};
+use log::{info, debug};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Position, RoomPosition, Terrain, LookResult};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util::{self, console::clear_console}};
 
 pub fn run_managers(memory: &mut GameMemory) {
     let tick_since_last = game::time() - memory.last_managers_tick;
-    info!("Last managers tick: {:?}\nCurrent tick: {:?}\nDifference: {:?}", memory.last_managers_tick, game::time(), tick_since_last);
+    debug!("Last managers tick: {:?}\nCurrent tick: {:?}\nDifference: {:?}", memory.last_managers_tick, game::time(), tick_since_last);
 
+    // Ok so this is bit of a debugging hack.
+    // Basically, we want to clear the console
+    // a single tick before managers get handled.
     if tick_since_last == 49 {
         clear_console();
     }
 
+    // Only want to run managers if it's been 20 ticks.
     if tick_since_last < 20 {
         return;
     }
 
+    handle_managers(memory);
+
+    info!("setting last_managers_tick");
+    memory.last_managers_tick = game::time();
+}
+
+fn handle_managers(memory: &mut GameMemory) {
     let rooms: Vec<Room> = game::rooms()
         .values()
         .collect();
@@ -25,9 +36,6 @@ pub fn run_managers(memory: &mut GameMemory) {
     TaskManager::assign(memory);
 
     SpawnManager::with_rooms(&rooms).spawn(memory);
-
-    info!("setting last_managers_tick");
-    memory.last_managers_tick = game::time();
 }
 
 pub struct TaskManager {
@@ -136,11 +144,39 @@ impl TaskManager {
                 }
             }).collect();
 
+
             if found.len() > 0 {
                 continue;
             }
 
-            tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit: 2 });
+            let source_position = source.pos();
+            let x = source_position.x();
+            let y = source_position.y();
+            let mut space_limit = 0;
+
+            info!("Around {},{}", x, y);
+
+            for xpos in (x-1)..(x+2) {
+                for ypos in (y-1)..(y+2) {
+                    info!("{},{}", xpos, ypos);
+                    if ypos == y && xpos == x {continue};
+
+                    let has_wall = room.look_at(&room.get_position_at(xpos, ypos));
+                    if has_wall.len() > 0 {
+                        for item in &has_wall {
+                            match item {
+                                LookResult::Terrain(kind) => match kind {
+                                    Terrain::Wall => {space_limit+=1},
+                                    _ => {}
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+
+            tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit });
         }
         
         // // Controller to upgrade
