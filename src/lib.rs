@@ -104,7 +104,11 @@ pub fn retrieve_memory() {
 
                     deserialized
                 },
-                Err(_) => GameMemory::default(),
+                Err(error) => {
+                    info!("Error deserializing memory:\n{:?}\n\n ... Falling back to default.", error);
+
+                    GameMemory::default()
+                },
             };
 
             deserialized.needs_deserialized = false;
