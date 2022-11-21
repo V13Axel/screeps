@@ -1,17 +1,13 @@
-use std::{collections::HashMap, cell::RefCell, panic};
+use std::{cell::RefCell, panic};
 
 use js_sys::JsString;
 use log::*;
-use manager::{TaskManager, SpawnManager};
-use mem::CreepMemory;
-use role::CreepPurpose;
-use screeps::{RawMemory, game, Room, Creep, SharedCreepProperties};
 
-use task::Task;
+use screeps::{RawMemory, game, SharedCreepProperties};
+
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
-use crate::mem::GameMemory;
+use crate::{mem::GameMemory, minion::clean_up_dead_creeps};
 
 mod logging;
 mod role;
@@ -27,85 +23,17 @@ thread_local! {
     );
 }
 
-pub fn run_managers(memory: &mut GameMemory) {
-    let rooms: Vec<Room> = game::rooms()
-        .values()
-        .collect();
-
-    TaskManager::with_rooms(&rooms).scan(memory);
-    TaskManager::assign(memory);
-
-    SpawnManager::with_rooms(&rooms).spawn(memory);
-}
-
-pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
-    debug!("Running {:?}", creep.name());
-    if memory.current_path.is_some() {
-        let path = memory.current_path.to_owned().unwrap();
-        memory.current_path = match creep.move_by_path(&JsValue::from_str(&path.value)) {
-            screeps::ReturnCode::Ok => Some(path),
-            _ => None
-        }
-    }
-
-    let worker_type = memory.worker_type.to_owned();
-
-    match worker_type {
-        minion::CreepWorkerType::SimpleWorker => {
-            match memory.current_task {
-                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
-                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
-                Task::Deposit { dest, .. } => CreepPurpose::deposit(creep, &dest.resolve().unwrap(), memory),
-                Task::Build { site, .. } => CreepPurpose::build(creep, &site.resolve().unwrap(), memory),
-                _ => {
-                    // Basically ... If it's not one of the above, we'll just skip it
-                    CreepPurpose::idle(creep, memory)
-                }
-            }     
-        },
-        minion::CreepWorkerType::Upgrader => {
-            match memory.current_task {
-                Task::Idle =>  CreepPurpose::idle(creep, memory),
-                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
-                Task::Upgrade { controller, .. } => CreepPurpose::upgrade(creep, &controller, memory),
-                _ => {
-                    CreepPurpose::idle(creep, memory);
-                }
-            }
-        },
-        minion::CreepWorkerType::Harvester => {
-            match memory.current_task {
-                Task::Idle => CreepPurpose::idle(creep, memory),
-                Task::Harvest { node, .. } => CreepPurpose::harvest(creep, &node, memory),
-                Task::Deposit { dest, .. } => CreepPurpose::deposit(creep, &dest.resolve().unwrap(), memory),
-                _ => CreepPurpose::idle(creep, memory),
-            }
-        }
-    }
-}
-
-pub fn run_creeps(memories: &mut HashMap<String, CreepMemory>) {
-    for creep in game::creeps().values() {
-        let name = creep.name();
-        let memory = memories.entry(name).or_default();
-        run_creep(&creep, memory);
-    }
-}
-
+/**
+*
+* This is where the actual magic happens
+*
+*/
 pub fn game_loop(memory: &mut GameMemory) {
-    if memory.ticks_since_managers >= 50 {
-        run_managers(memory);
+    clean_up_dead_creeps(memory);
 
-        memory.ticks_since_managers = 0;
-    } else {
-        memory.ticks_since_managers += 1;
-    }
+    manager::run_managers(memory);
 
-    if memory.ticks_since_managers == 49 {
-        clear_console();
-    }
-
-    run_creeps(&mut memory.creeps);
+    minion::run_creeps(&mut memory.creeps);
 }
 
 // to use a reserved name as a function name, use `js_name`:
@@ -115,8 +43,6 @@ pub fn memory_loop() {
     GAME_MEMORY.with(|game_memory_refcell| {
         let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
 
-        clean_up_dead_creeps(&mut game_memory);
-
         game_loop(&mut game_memory);
 
         // Persist to memory refcell after game logic executes
@@ -125,9 +51,8 @@ pub fn memory_loop() {
 
     // Serialize and save to memory. This is done separately to avoid weirdness.
     GAME_MEMORY.with(|game_memory_refcell| {
-        let mut memory_to_save = game_memory_refcell.borrow_mut().to_owned();
+        let memory_to_save = game_memory_refcell.borrow_mut().to_owned();
 
-        memory_to_save.ticks_since_managers = 9999;
 
         save_memory(memory_to_save);
     });
@@ -203,19 +128,3 @@ fn save_memory(game_memory: GameMemory) {
     }
 }
 
-// What a crazy hack.
-fn clear_console() {
-    console::log_1(&JsString::from("<script>angular.element(document.getElementsByClassName('fa fa-trash ng-scope')[0].parentNode).scope().Console.clear()</script>"));
-}
-
-fn clean_up_dead_creeps(game_memory: &mut GameMemory) {
-    game_memory.creeps.retain(
-        |name, _| game::creeps()
-            .values()
-            .map(
-                |creep| creep.name()
-            )
-            .collect::<Vec<String>>()
-            .contains(name)
-    );
-}

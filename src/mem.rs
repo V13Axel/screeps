@@ -8,7 +8,7 @@ use crate::{minion::CreepWorkerType, task::Task, util::path::CreepPath};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameMemory {
-    pub ticks_since_managers: usize,
+    pub last_managers_tick: u32,
     pub needs_deserialized: bool,
     pub creeps: HashMap<String, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
@@ -20,7 +20,7 @@ impl GameMemory {
     pub fn default() -> Self {
         GameMemory { 
             needs_deserialized: true,
-            ticks_since_managers: 9999,
+            last_managers_tick: 0,
             creeps: HashMap::new(),
             room_memories: HashMap::new(),
             structure_memories: HashMap::new(),

@@ -3,7 +3,32 @@ use std::{cmp::Ordering, collections::HashMap};
 use log::info;
 use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep};
 
-use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util};
+use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util::{self, console::clear_console}};
+
+pub fn run_managers(memory: &mut GameMemory) {
+    let tick_since_last = game::time() - memory.last_managers_tick;
+    info!("Last managers tick: {:?}\nCurrent tick: {:?}\nDifference: {:?}", memory.last_managers_tick, game::time(), tick_since_last);
+
+    if tick_since_last == 49 {
+        clear_console();
+    }
+
+    if tick_since_last < 20 {
+        return;
+    }
+
+    let rooms: Vec<Room> = game::rooms()
+        .values()
+        .collect();
+
+    TaskManager::with_rooms(&rooms).scan(memory);
+    TaskManager::assign(memory);
+
+    SpawnManager::with_rooms(&rooms).spawn(memory);
+
+    info!("setting last_managers_tick");
+    memory.last_managers_tick = game::time();
+}
 
 pub struct TaskManager {
     rooms: Vec<Room>,
@@ -83,11 +108,13 @@ impl TaskManager {
             let tasks = game_memory.tasks.entry(
                 room.name().to_string()
             ).or_default();
+
             self.scan_room(&room, tasks);
         }
     }
 
     pub fn scan_room(&self, room: &Room, tasks: &mut Vec<Task>) {
+        // todo: Probably ought to have tasks for refilling spawns
         let spawn = &room.find(find::MY_SPAWNS)[0];
 
         let mut sources = room.find(find::SOURCES);
