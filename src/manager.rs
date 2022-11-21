@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::HashMap};
 
 use log::{info, debug};
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Position, RoomPosition, Terrain, LookResult, creeps};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Terrain, LookResult};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util::{self, console::clear_console}};
 
