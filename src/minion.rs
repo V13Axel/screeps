@@ -22,6 +22,7 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
         let path = memory.current_path.to_owned().unwrap();
         memory.current_path = match creep.move_by_path(&JsValue::from_str(&path.value)) {
             screeps::ReturnCode::Ok => Some(path),
+            screeps::ReturnCode::Tired => Some(path),
             _ => None
         }
     }
