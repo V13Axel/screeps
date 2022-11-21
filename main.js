@@ -44,11 +44,6 @@ function roomLoop(room) {
     for(var role in roles) {
         let roleDetails = roles[role];
 
-        // console.log(spawnManager.spawnGivenBudget(
-        //     roleDetails,
-        //     Math.max(room.energyAvailable * .8, 300)
-        // ));
-
         for (var activeSpawn of spawns) {
             let desiredNumber = roleDetails.shouldSpawn(room) 
                 ? roleDetails.desiredNumber 
@@ -57,36 +52,19 @@ function roomLoop(room) {
             let creeps = Object.values(roomCreeps).filter(creep => creep.memory.role == role);
             let startedSpawning = false;
 
-            creeps.forEach(creep => roleDetails.run(creep));
+            creeps.forEach(creep => {
+                let energyOnGround = creep.pos.lookFor(LOOK_ENERGY)
+                if(energyOnGround.length > 0) {
+                    creep.pickup(energyOnGround[0]);
+                }
+                roleDetails.run(creep)
+            });
 
-            if(
-                !activeSpawn.spawning &&
-                    !startedSpawning &&
-                    creeps.length < desiredNumber &&
-                    activeSpawn.room.energyAvailable >= 300
-            ) {
-                let body = roleDetails.definition;
-                // let body = spawnManager.spawnGivenBudget(
-                //     roleDetails,
-                //     Math.max(activeSpawn.room.energyAvailable * .8, 300)
-                // );
-                let name = role + Game.time;
-                let memory = { memory: { role } };
-
-                startedSpawning = true;
-
-                let result = activeSpawn.spawnCreep(
-                    body,
-                    name,
-                    memory
-                );
-            } 
-
+            startedSpawning = spawnManager.spawnIfNecessary(activeSpawn, creeps, desiredNumber, roleDetails);
 
             if(creeps.length > 0 && creeps.length > desiredNumber) {
                 creeps[0].suicide();
             }
-            // spawnManager.spawnCreepsIfNeeded(spawn, role, roleDetails, roomCreeps, room);
         }
     }
 };

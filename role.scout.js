@@ -1,19 +1,12 @@
 var roleScout = {
     name: 'DefenseTech',
     desiredNumber: 1,
-    definition: [WORK, CARRY, MOVE],
+    definition: [MOVE],
     partsBudgets: {
-        [WORK]: {
-            costModifier: (1/3),
-            cost: 100
-        },
-        [CARRY]: {
-            costModifier: .25,
-            cost: 50
-        },
         [MOVE]: {
-            costModifier: .25,
-            cost: 50
+            costModifier: 1,
+            cost: 50,
+            limit: 4,
         },
     },
 

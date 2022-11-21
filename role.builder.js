@@ -4,15 +4,11 @@ var roleBuilder = {
     definition: [WORK, MOVE, CARRY],
     partsBudgets: {
         [WORK]: {
-            costModifier: .3,
+            costModifier: .5,
             cost: 100
         },
         [CARRY]: {
-            costModifier: .40,
-            cost: 50
-        },
-        [MOVE]: {
-            costModifier: .30,
+            costModifier: .5,
             cost: 50
         },
     },

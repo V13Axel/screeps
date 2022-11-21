@@ -1,28 +1,25 @@
 module.exports = {
     spawnGivenBudget(role, budget) {
-        if(role.name != 'Maintainer') {
-            return;
-        }
-        console.log(role.name);
         let parts = _.clone(role.definition);
         let total = 0;
         let budgetFits = {};
 
         for (let [part, definition] of Object.entries(role.partsBudgets)) {
             budgetFits[part] = true;
-            total += definition.cost;
+            total += (definition.cost + 50);
         }
-
-        console.log(parts, total, JSON.stringify(budgetFits));
 
         let totalLoops = 0;
 
         while(Object.entries(budgetFits).filter(item => item[1]).length > 0 && totalLoops < 5) {
-            console.log(JSON.stringify(budgetFits));
             for (var [partName, definition] of Object.entries(role.partsBudgets)) {
-                if(total + definition.cost <= budget * definition.costModifier) {
-                    total += definition.cost;
+                if(definition.limit <= parts.filter(part => part == partName).length) {
+                    continue;
+                }
+                if(total + (definition.cost + 50) <= budget * definition.costModifier) {
+                    total += (definition.cost + 50);
                     parts.push(partName);
+                    parts.push(MOVE);
                     continue;
                 } 
 
@@ -33,12 +30,37 @@ module.exports = {
 
         parts.sort();
 
-        console.log(parts);
-
         if(parts.length < 3) {
             return role.definition;
         }
 
         return parts; 
     },
+
+    spawnIfNecessary(activeSpawn, creeps, desiredNumber, roleDetails, startedSpawning) {
+        if(
+            !activeSpawn.spawning &&
+                !startedSpawning &&
+                creeps.length < desiredNumber &&
+                activeSpawn.room.energyAvailable >= 300
+        ) {
+            // let body = roleDetails.definition;
+            let body = this.spawnGivenBudget(
+                roleDetails,
+                Math.max(activeSpawn.room.energyAvailable * .8, 300)
+            );
+            let name = roleDetails.name + Game.time;
+            let memory = { memory: { role: roleDetails.name.toLowerCase() } };
+
+            startedSpawning = true;
+
+            let result = activeSpawn.spawnCreep(
+                body,
+                name,
+                memory
+            );
+        } 
+
+        return startedSpawning;
+    }
 }

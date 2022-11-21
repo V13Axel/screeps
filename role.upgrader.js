@@ -1,18 +1,14 @@
 var roleUpgrader = {
     name: 'Upgrader',
-    desiredNumber: 6,
+    desiredNumber: 2,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
         [WORK]: {
-            costModifier: .3,
+            costModifier: .5,
             cost: 100
         },
         [CARRY]: {
-            costModifier: .40,
-            cost: 50
-        },
-        [MOVE]: {
-            costModifier: .30,
+            costModifier: .5,
             cost: 50
         },
     },

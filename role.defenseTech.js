@@ -1,18 +1,10 @@
 var roleDefenseTech = {
     name: 'DefenseTech',
-    desiredNumber: 2,
+    desiredNumber: 1,
     definition: [WORK, CARRY, MOVE],
     partsBudgets: {
-        [WORK]: {
-            costModifier: .3,
-            cost: 100
-        },
         [CARRY]: {
-            costModifier: .2,
-            cost: 50
-        },
-        [MOVE]: {
-            costModifier: .5,
+            costModifier: 1,
             cost: 50
         },
     },
@@ -58,7 +50,7 @@ var roleDefenseTech = {
             switch(structure.structureType) {
                 case STRUCTURE_STORAGE:
                     // console.log("Structure is storage", structure.store.getUsedCapacity(RESOURCE_ENERGY));
-                    return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 3000;
+                    return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
                 case STRUCTURE_CONTAINER:
                     // console.log("Structure is container", structure.store.getUsedCapacity(RESOURCE_ENERGY));
                     return structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0;
@@ -74,12 +66,10 @@ var roleDefenseTech = {
 
         if (structureSources.length > 0) {
             let result = creep.withdraw(structureSources[0], RESOURCE_ENERGY);
-        switch (result) {
+            switch (result) {
                 case ERR_NOT_IN_RANGE:
-                creep.moveTo(structureSources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
-                break;
-                default:
-                console.log(result);
+                    creep.moveTo(structureSources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+                    break;
             }
 
             return;
@@ -90,7 +80,6 @@ var roleDefenseTech = {
 
             creep.memory.source = sources[Math.floor(Math.random()*sources.length)].id;
         }
-
 
         let target = Game.getObjectById(creep.memory.source);
         let attempt = creep.harvest(target); 

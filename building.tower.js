@@ -18,23 +18,31 @@ module.exports = {
                 return;
             }
 
-            if(tower.store.getUsedCapacity() < 1050) {
+            if(tower.store.getUsedCapacity(RESOURCE_ENERGY) < 500) {
                 return;
             }
 
-            let creeps = tower.room.find(FIND_MY_CREEPS).filter(creep => creep.hits < creep.hitsMax);
+            let creeps = tower.room.find(FIND_MY_CREEPS, {
+                filter: creep => creep.hits < creep.hitsMax
+            });
+
             if(creeps.length > 0) {
                 tower.heal(creeps[0]);
                 return;
             }
 
-            if(tower.store.getUsedCapacity() < 1550) {
+            if(tower.store.getUsedCapacity(RESOURCE_ENERGY) < 600) {
                 return;
             }
 
-            let maintenanceNeeded = tower.room.find(FIND_STRUCTURES).filter(structure => {
-                return structure.hits < structure.hitsMax;
+            let maintenanceNeeded = tower.room.find(FIND_STRUCTURES, {
+                filter: structure => {
+                    return structure.hits < structure.hitsMax;
+                }
             });
+
+            maintenanceNeeded.sort((a, b) => a.hits < b.hits);
+            maintenanceNeeded.sort((a, b) => ((a.hits / a.hitsMax) * 100) < ((b.hits / b.hitsMax) * 100));
 
             if(maintenanceNeeded.length > 0) {
                 tower.repair(maintenanceNeeded[0]);
