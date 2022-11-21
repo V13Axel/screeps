@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::HashMap};
 
 use log::{info, debug};
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Position, RoomPosition, Terrain, LookResult};
+use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Position, RoomPosition, Terrain, LookResult, creeps};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util::{self, console::clear_console}};
 
@@ -23,7 +23,7 @@ pub fn run_managers(memory: &mut GameMemory) {
 
     handle_managers(memory);
 
-    info!("setting last_managers_tick");
+    debug!("setting last_managers_tick");
     memory.last_managers_tick = game::time();
 }
 
@@ -122,6 +122,10 @@ impl TaskManager {
     }
 
     pub fn scan_room(&self, room: &Room, tasks: &mut Vec<Task>) {
+        tasks.retain(|_| false);
+        // Controller to upgrade
+        tasks.push(Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] });
+
         // todo: Probably ought to have tasks for refilling spawns
         let spawn = &room.find(find::MY_SPAWNS)[0];
 
@@ -137,22 +141,9 @@ impl TaskManager {
 
         // Sources to harvest
         for source in sources.iter() {
-            let found: Vec<&Task> = tasks.iter().filter(|task| {
-                match task {
-                    Task::Harvest { node, worked_by: _, space_limit: _ } => node.to_string() == source.id().to_string(),
-                    _ => false
-                }
-            }).collect();
-
-
-            if found.len() > 0 {
-                continue;
-            }
-
-            let source_position = source.pos();
-            let x = source_position.x();
-            let y = source_position.y();
-            let mut space_limit = 0;
+            let x = source.pos().x();
+            let y = source.pos().y();
+            let mut space_limit = 8;
 
             info!("Around {},{}", x, y);
 
@@ -166,7 +157,7 @@ impl TaskManager {
                         for item in &has_wall {
                             match item {
                                 LookResult::Terrain(kind) => match kind {
-                                    Terrain::Wall => {space_limit+=1},
+                                    Terrain::Wall => {space_limit-=1},
                                     _ => {}
                                 }
                                 _ => {}
@@ -176,22 +167,11 @@ impl TaskManager {
                 }
             }
 
+            info!("Calculating space limit of harvest as {}", space_limit);
+
             tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit });
         }
         
-        // // Controller to upgrade
-        // let upgrade_tasks = room_tasks.iter().filter(|task| {
-        //     match task {
-        //         Task::Upgrade { .. } => true,
-        //         _ => false,
-        //     }
-        // }).collect::<Vec<&Task>>();
-        //
-        // info!("{:?}", upgrade_tasks);
-        //
-        // if upgrade_tasks.len() < 1 {
-        //     room_tasks.push(Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] });
-        // }
     }
 }
 
@@ -227,19 +207,33 @@ impl SpawnManager {
 
     pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: Vec<Task>) -> Option<(String, CreepMemory)> {
         let room_creeps = spawner.room().unwrap().find(find::MY_CREEPS);
+        let creeps_needed = _room_tasks.iter().fold(0, |total, task| {
+            total + match task {
+                Task::Idle => 0,
+                Task::Harvest { space_limit, .. } => *space_limit,
+                Task::Build { .. } => 2,
+                Task::Deposit { .. } => 0,
+                Task::Upgrade { .. } => 2,
+                _ => 0
+            }
+        });
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("Worker{}", game::time());
 
         parts.push(Part::Move);
-        parts.push(Part::Move);
+        // parts.push(Part::Move);
         parts.push(Part::Carry);
         parts.push(Part::Work);
 
 
-        if room_creeps.len() < 5 && spawner.spawning().is_none() {
-            spawner.spawn_creep(&parts, &new_name);
+        if room_creeps.len() < creeps_needed && spawner.spawning().is_none() {
+            info!("Need {} creeps, have {}. Spawning.", creeps_needed, room_creeps.len());
+            let result = spawner.spawn_creep(&parts, &new_name);
+            info!("Spawn result: {:?}", result);
 
             return Some((new_name, CreepMemory::default()));
+        } else {
+            info!("Need {} creeps, have {}. Not spawning.", creeps_needed, room_creeps.len());
         }
 
         None
