@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use screeps::{ObjectId, Structure};
 use serde::{Serialize, Deserialize};
 
-use crate::{minion::CreepWorkerType, task::Task, util::path::CreepPath};
+use crate::{minion::MinionType, task::Task, util::path::CreepPath};
 
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -56,7 +56,7 @@ pub struct ControllerMemory {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CreepMemory {
-    pub worker_type: CreepWorkerType,
+    pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
     pub current_task: Task,
 }
@@ -64,7 +64,7 @@ pub struct CreepMemory {
 impl Default for CreepMemory {
     fn default() -> CreepMemory {
         CreepMemory {
-            worker_type: CreepWorkerType::SimpleWorker,
+            worker_type: MinionType::SimpleWorker,
             current_path: None,
             current_task: Task::Idle,
         }
@@ -74,7 +74,7 @@ impl Default for CreepMemory {
 impl Default for &CreepMemory {
     fn default() -> &'static CreepMemory {
         &CreepMemory {
-            worker_type: CreepWorkerType::SimpleWorker,
+            worker_type: MinionType::SimpleWorker,
             current_path: None,
             current_task: Task::Idle,
         }

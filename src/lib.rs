@@ -62,10 +62,7 @@ pub fn memory_loop() {
 
     // Serialize and save to memory. This is done separately to avoid weirdness.
     GAME_MEMORY.with(|game_memory_refcell| {
-        let memory_to_save = game_memory_refcell.borrow_mut().to_owned();
-
-
-        save_memory(memory_to_save);
+        save_memory(game_memory_refcell.borrow_mut().to_owned());
     });
 
     debug!("Game loop finished: {}", game::time());

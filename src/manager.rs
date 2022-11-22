@@ -3,7 +3,7 @@ use std::{cmp::Ordering, collections::HashMap};
 use log::{info, debug};
 use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Terrain, LookResult};
 
-use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::CreepWorkerType, util::{self, console::clear_console}};
+use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::MinionType, util::{self, console::clear_console}};
 
 pub fn run_managers(memory: &mut GameMemory) {
     let tick_since_last = game::time() - memory.last_managers_tick;
@@ -12,7 +12,7 @@ pub fn run_managers(memory: &mut GameMemory) {
     // Ok so this is bit of a debugging hack.
     // Basically, we want to clear the console
     // a single tick before managers get handled.
-    if tick_since_last == 49 {
+    if tick_since_last == 19 {
         clear_console();
     }
 
@@ -69,8 +69,6 @@ impl TaskManager {
 }
 
     fn assign_creep(creep: &Creep, memory: &mut CreepMemory, tasks: &mut HashMap<String, Vec<Task>>) {
-        info!("Creep - {:?}", memory);
-
         let creep_room = &creep.room().unwrap().name().to_string();
 
         match tasks.get(creep_room) {
@@ -102,7 +100,7 @@ impl TaskManager {
                 tasks.insert(creep_room.to_string(), copied_tasks);
 
                 memory.current_task = creep_task.to_owned();
-                memory.worker_type = CreepWorkerType::SimpleWorker;
+                memory.worker_type = MinionType::SimpleWorker;
 
             },
             None => {
@@ -145,11 +143,8 @@ impl TaskManager {
             let y = source.pos().y();
             let mut space_limit = 8;
 
-            info!("Around {},{}", x, y);
-
             for xpos in (x-1)..(x+2) {
                 for ypos in (y-1)..(y+2) {
-                    info!("{},{}", xpos, ypos);
                     if ypos == y && xpos == x {continue};
 
                     let has_wall = room.look_at(&room.get_position_at(xpos, ypos));

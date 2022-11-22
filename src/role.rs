@@ -2,7 +2,7 @@ use log::{warn, debug, info};
 use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, HasTypedId, Position, Transferable, ConstructionSite};
 use wasm_bindgen::JsValue;
 
-use crate::{util::path::CreepPath, mem::CreepMemory, minion::CreepWorkerType, task::Task};
+use crate::{util::path::CreepPath, mem::CreepMemory, minion::MinionType, task::Task};
 
 
 pub struct CreepPurpose {
@@ -102,7 +102,7 @@ impl CreepPurpose {
             let node = creep.room().unwrap().find(find::SOURCES)[0].id();
             memory.current_path = None;
             memory.current_task = Task::Harvest { node , worked_by: vec![], space_limit: 0 };
-            memory.worker_type = CreepWorkerType::SimpleWorker;
+            memory.worker_type = MinionType::SimpleWorker;
         }
     }
 
@@ -143,7 +143,7 @@ impl CreepPurpose {
             debug!("{} not keeping job", creep.name());
             memory.current_path = None;
             memory.current_task = Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] };
-            memory.worker_type = CreepWorkerType::SimpleWorker;
+            memory.worker_type = MinionType::SimpleWorker;
         }
     }
 
