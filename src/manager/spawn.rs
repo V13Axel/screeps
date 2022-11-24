@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use screeps::{StructureSpawn, Room, find, Part, game};
+use screeps::{StructureSpawn, Room, find, Part, game, ENERGY, ResourceType};
 
 use crate::{mem::{GameMemory, CreepMemory}, minion::MinionType, task::Task};
 
@@ -24,40 +24,63 @@ impl SpawnManager {
     pub fn spawn(&self, game_memory: &mut GameMemory) {
         for spawner in self.spawners.iter() {
             info!("Running spawner {}", spawner.name().to_string());
-            let id = spawner.room().unwrap().name();
-            let room_tasks = game_memory.room_task_queues.entry(id.to_string()).or_default();
+            let id = spawner.room()
+                .unwrap()
+                .name();
+            let room_tasks = game_memory.room_task_queues
+                .entry(id.to_string())
+                .or_default();
+
             self.spawn_if_needed(spawner.to_owned(), room_tasks);
         }
     }
 
-    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Task>>) -> Option<(String, CreepMemory)> {
+    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Task>>) {
+        if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
+            println!("Can't spawn right now, energy too low or already spawning");
+
+            return;
+        }
+
         let room_creeps = spawner.room()
             .unwrap()
             .find(find::MY_CREEPS);
-        let creeps_needed = _room_tasks.iter().fold(0, |total, tasks| {
-            info!("{:?}", tasks);
+        let mut to_spawn: Option<(MinionType, Task)> = None;
 
-            total
-        });
+        'outer: for (minion_type, tasks) in _room_tasks.iter() {
+            for task in tasks.iter() {
+                match task {
+                    Task::Upgrade { controller, worked_by } => {
+                        if worked_by.len() < 2 {
+                            to_spawn = Some(
+                                (minion_type.to_owned(), task.to_owned())
+                            );
+
+                            Self::spawn_it(minion_type, spawner);
+
+                            break 'outer;
+                        }
+                    },
+                    _ => {
+                        println!("A different task");
+                    }
+                }
+            }
+        }
+
+        if let Some((minion_type, task)) = to_spawn {
+        }
+    }
+
+    fn spawn_it(minion_type: &MinionType, spawner: StructureSpawn) {
         let mut parts: Vec<Part> = vec![];
-        let new_name = format!("Worker{}", game::time());
+        let new_name = format!("{}{}", minion_type.to_string(), game::time());
 
         parts.push(Part::Move);
         // parts.push(Part::Move);
         parts.push(Part::Carry);
         parts.push(Part::Work);
 
-
-        if room_creeps.len() < creeps_needed && spawner.spawning().is_none() {
-            info!("Need {} creeps, have {}. Spawning.", creeps_needed, room_creeps.len());
-            let result = spawner.spawn_creep(&parts, &new_name);
-            info!("Spawn result: {:?}", result);
-
-            return Some((new_name, CreepMemory::default()));
-        } else {
-            info!("Need {} creeps, have {}. Not spawning.", creeps_needed, room_creeps.len());
-        }
-
-        None
+        spawner.spawn_creep(&parts, &new_name);
     }
 }

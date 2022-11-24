@@ -1,3 +1,4 @@
+use log::info;
 use screeps::{Room, game};
 
 use crate::mem::GameMemory;
@@ -7,8 +8,7 @@ use self::{task::TaskManager, spawn::SpawnManager};
 mod spawn;
 mod task;
 
-pub struct Managers {
-}
+pub struct Managers;
 
 impl Managers {
     pub fn run(memory: &mut GameMemory) {

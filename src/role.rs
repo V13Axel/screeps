@@ -8,11 +8,13 @@ pub struct CreepAction;
 
 impl CreepAction {
     pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
-        Self::move_near(
-            creep, 
-            creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), 
-            memory
-        );
+        let controller = creep.room().unwrap().controller().unwrap().id();
+        memory.current_task = Task::Upgrade { controller, worked_by: vec![] }
+        // Self::move_near(
+        //     creep, 
+        //     creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), 
+        //     memory
+        // );
     }
 
     // Gets you to the position
@@ -99,6 +101,8 @@ impl CreepAction {
             memory.current_path = None;
             memory.current_task = Task::Harvest { node , worked_by: vec![], space_limit: 0 };
             memory.worker_type = MinionType::SimpleWorker;
+
+            Self::harvest(creep, &node, memory)
         }
     }
 

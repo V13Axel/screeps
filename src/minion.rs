@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
+use log::info;
 use screeps::{Creep, game, ObjectId, MaybeHasTypedId};
 use serde::{Serialize, Deserialize};
 use crate::mem::{CreepMemory, GameMemory};
@@ -26,6 +28,16 @@ pub enum MinionType {
     Harvester,
 }
 
+impl Display for MinionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SimpleWorker => write!(f, "Worker"),
+                Self::Upgrader => write!(f, "Upgrader"),
+               Self::Harvester => write!(f, "Harvester"),
+        }
+    }
+}
+
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
     if memory.current_path.is_some() {
         let path = memory.current_path.to_owned().unwrap();
@@ -38,6 +50,8 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
 
     let worker_type = memory.worker_type.to_owned();
 
+    info!("{:?}", memory.current_task);
+
     match worker_type {
         minion::MinionType::SimpleWorker => {
             match memory.current_task {
@@ -46,8 +60,11 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
                 Task::Deposit { dest, .. } => CreepAction::deposit(creep, &dest.resolve().unwrap(), memory),
                 Task::Build { site, .. } => CreepAction::build(creep, &site.resolve().unwrap(), memory),
                 _ => {
-                    // Basically ... If it's not one of the above, we'll just skip it
-                    CreepAction::idle(creep, memory)
+                    // Basically ... If it's not one of the above, we'll just upgrade the
+                    // controller
+                    let controller = creep.room().unwrap().controller().unwrap().try_id().unwrap();
+                    memory.current_task = Task::Upgrade { controller, worked_by: vec![] };
+                    CreepAction::upgrade(creep, &controller, memory)
                 }
             }     
         },
