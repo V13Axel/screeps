@@ -1,29 +1,18 @@
 use std::{cmp::Ordering, collections::HashMap};
 
-use log::{info, debug};
+use log::info;
 use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Terrain, LookResult};
 
-use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::MinionType, util::{self, console::clear_console}};
+use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::MinionType, util};
 
 pub fn run_managers(memory: &mut GameMemory) {
-    let tick_since_last = game::time() - memory.last_managers_tick;
-    debug!("Last managers tick: {:?}\nCurrent tick: {:?}\nDifference: {:?}", memory.last_managers_tick, game::time(), tick_since_last);
-
-    // Ok so this is bit of a debugging hack.
-    // Basically, we want to clear the console
-    // a single tick before managers get handled.
-    if tick_since_last == 19 {
-        clear_console();
-    }
-
     // Only want to run managers if it's been 20 ticks.
-    if tick_since_last < 20 {
+    if game::time() - memory.last_managers_tick < 20 {
         return;
     }
 
     handle_managers(memory);
 
-    debug!("setting last_managers_tick");
     memory.last_managers_tick = game::time();
 }
 
@@ -62,69 +51,51 @@ impl TaskManager {
 
             Self::assign_creep(
                 &creep,
-                &mut game_memory.creeps.entry(creep.name()).or_default(),
-                &mut game_memory.tasks
+                &mut game_memory.creeps.entry(creep.try_id().unwrap()).or_default(),
+                &mut game_memory.room_task_queues
             );
         }
 }
 
-    fn assign_creep(creep: &Creep, memory: &mut CreepMemory, tasks: &mut HashMap<String, Vec<Task>>) {
+    fn assign_creep(
+        creep: &Creep, 
+        memory: &mut CreepMemory, 
+        room_task_queues: &mut HashMap<String, HashMap<MinionType, Vec<Task>>>
+    ) {
         let creep_room = &creep.room().unwrap().name().to_string();
 
-        match tasks.get(creep_room) {
-            Some(room_tasks) => {
-                info!("Room has tasks: {:?}", room_tasks);
-                let mut copied_tasks = room_tasks.to_owned();
-                let mut creep_task = copied_tasks.pop().unwrap_or(Task::Idle);
+        let room_tasks_by_minion_type = room_task_queues.entry(creep_room.to_string()).or_default(); 
 
-                creep_task = match creep_task {
-                    Task::Idle => Task::Idle,
-                    Task::Harvest { node, mut worked_by, space_limit } => {
-                        worked_by.push(creep.try_id().unwrap());
-
-                        Task::Harvest { node, worked_by, space_limit }
-                    }
-                    Task::Build { site, mut worked_by } => {
-                        worked_by.push(creep.try_id().unwrap());
-
-                        Task::Build { 
-                            site, 
-                            worked_by 
-                        }
-                    },
-                    _ => todo!("Haven't implemented that yet"),
-                };
-
-                copied_tasks.push(creep_task.to_owned());
-
-                tasks.insert(creep_room.to_string(), copied_tasks);
-
-                memory.current_task = creep_task.to_owned();
-                memory.worker_type = MinionType::SimpleWorker;
-
-            },
-            None => {
-                info!("Room has no tasks");
-            } 
-        };
+        info!("{:?}", room_tasks_by_minion_type);
     }
 
     pub fn scan(&self, game_memory: &mut GameMemory) {
         for room in self.rooms.iter() {
-            let tasks = game_memory.tasks.entry(
+            let room_task_queues = game_memory.room_task_queues.entry(
                 room.name().to_string()
             ).or_default();
 
-            self.scan_room(&room, tasks);
+            self.scan_room(&room, room_task_queues);
         }
     }
 
-    pub fn scan_room(&self, room: &Room, tasks: &mut Vec<Task>) {
-        tasks.retain(|_| false);
-        // Controller to upgrade
-        tasks.push(Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] });
+    fn _room_upgrade_task(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+        if !room_task_queues.contains_key(&MinionType::Upgrader) {
+            // Controller to upgrade
+            room_task_queues.insert(
+                MinionType::Upgrader,
+                vec![Task::Upgrade { controller: room.controller().unwrap().id(), worked_by: vec![] }]
+            );
+        }
+    }
 
-        // todo: Probably ought to have tasks for refilling spawns
+    pub fn scan_room(&self, room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+        Self::_room_upgrade_task(room, room_task_queues);
+
+    }
+
+    fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+        // todo: Probably ought to have room_task_queues for refilling spawns
         let spawn = &room.find(find::MY_SPAWNS)[0];
 
         let mut sources = room.find(find::SOURCES);
@@ -139,34 +110,18 @@ impl TaskManager {
 
         // Sources to harvest
         for source in sources.iter() {
-            let x = source.pos().x();
-            let y = source.pos().y();
-            let mut space_limit = 8;
+            let space_limit = util::position::PositionCalculator::spaces_around(&room, source.pos());
 
-            for xpos in (x-1)..(x+2) {
-                for ypos in (y-1)..(y+2) {
-                    if ypos == y && xpos == x {continue};
-
-                    let has_wall = room.look_at(&room.get_position_at(xpos, ypos));
-                    if has_wall.len() > 0 {
-                        for item in &has_wall {
-                            match item {
-                                LookResult::Terrain(kind) => match kind {
-                                    Terrain::Wall => {space_limit-=1},
-                                    _ => {}
-                                }
-                                _ => {}
-                            }
-                        }
+            room_task_queues.entry(MinionType::Harvester)
+                .or_default()
+                .push(
+                    Task::Harvest { 
+                        node: source.id(), 
+                        worked_by: vec![], 
+                        space_limit 
                     }
-                }
-            }
-
-            info!("Calculating space limit of harvest as {}", space_limit);
-
-            tasks.push(Task::Harvest { node: source.id(), worked_by: vec![], space_limit });
+                );
         }
-        
     }
 }
 
@@ -190,27 +145,15 @@ impl SpawnManager {
         for spawner in self.spawners.iter() {
             info!("Running spawner {}", spawner.name().to_string());
             let id = spawner.room().unwrap().name();
-            let room_tasks: Vec<Task> = game_memory.tasks.get(&id.to_string()).unwrap_or(&vec![]).to_owned();
-            let result = self.spawn_if_needed(spawner.to_owned(), room_tasks);
-
-            if result.is_some() {
-                let (creep_name, creep_memory) = result.unwrap();
-                game_memory.creeps.insert(creep_name, creep_memory);
-            }
+            let room_tasks = game_memory.room_task_queues.entry(id.to_string()).or_default();
+            self.spawn_if_needed(spawner.to_owned(), room_tasks);
         }
     }
 
-    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: Vec<Task>) -> Option<(String, CreepMemory)> {
+    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Task>>) -> Option<(String, CreepMemory)> {
         let room_creeps = spawner.room().unwrap().find(find::MY_CREEPS);
-        let creeps_needed = _room_tasks.iter().fold(0, |total, task| {
-            total + match task {
-                Task::Idle => 0,
-                Task::Harvest { space_limit, .. } => *space_limit,
-                Task::Build { .. } => 2,
-                Task::Deposit { .. } => 0,
-                Task::Upgrade { .. } => 2,
-                _ => 0
-            }
+        let creeps_needed = _room_tasks.iter().fold(0, |total, tasks| {
+            total
         });
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("Worker{}", game::time());

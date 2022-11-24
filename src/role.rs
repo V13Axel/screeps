@@ -4,13 +4,9 @@ use wasm_bindgen::JsValue;
 
 use crate::{util::path::CreepPath, mem::CreepMemory, minion::MinionType, task::Task};
 
+pub struct CreepAction;
 
-pub struct CreepPurpose {
-    // name: String,
-    // definition: Vec<String>
-}
-
-impl CreepPurpose {
+impl CreepAction {
     pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
         Self::move_near(
             creep, 

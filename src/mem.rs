@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use screeps::{ObjectId, Structure};
+use screeps::{ObjectId, Structure, Creep};
 use serde::{Serialize, Deserialize};
 
 use crate::{minion::MinionType, task::Task, util::path::CreepPath};
@@ -8,12 +8,18 @@ use crate::{minion::MinionType, task::Task, util::path::CreepPath};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameMemory {
+    // Administrative
     pub last_managers_tick: u32,
     pub needs_deserialized: bool,
-    pub creeps: HashMap<String, CreepMemory>,
+
+    // Memory
+    pub creeps: HashMap<ObjectId<Creep>, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
-    pub tasks: HashMap<String, Vec<Task>>,
+
+    // Task queues
+    pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Task>>>,
+    pub room_task_claims: HashMap<String, HashMap<Task, ObjectId<Creep>>>,
 }
 
 impl GameMemory {
@@ -24,7 +30,8 @@ impl GameMemory {
             creeps: HashMap::new(),
             room_memories: HashMap::new(),
             structure_memories: HashMap::new(),
-            tasks: HashMap::new()
+            room_task_queues: HashMap::new(),
+            room_task_claims: HashMap::new(),
         }
     }
 }
