@@ -3,6 +3,7 @@ use std::{cell::RefCell, panic};
 use js_sys::JsString;
 use log::*;
 
+use manager::Managers;
 use screeps::{RawMemory, game};
 
 use wasm_bindgen::prelude::*;
@@ -31,7 +32,7 @@ thread_local! {
 pub fn game_loop(memory: &mut GameMemory) {
     clean_up_dead_creeps(memory);
 
-    manager::run_managers(memory);
+    Managers::run(memory);
 
     minion::run_creeps(&mut memory.creeps);
 }
