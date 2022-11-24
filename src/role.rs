@@ -8,13 +8,11 @@ pub struct CreepAction;
 
 impl CreepAction {
     pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
-        let controller = creep.room().unwrap().controller().unwrap().id();
-        memory.current_task = Task::Upgrade { controller, worked_by: vec![] }
-        // Self::move_near(
-        //     creep, 
-        //     creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), 
-        //     memory
-        // );
+        Self::move_near(
+            creep, 
+            creep.room().unwrap().find(find::MY_SPAWNS)[0].pos(), 
+            memory
+        );
     }
 
     // Gets you to the position
@@ -72,14 +70,14 @@ impl CreepAction {
             debug!("Creep has energy");
             match controller_id.resolve() {
                 Some(controller) => {
-                    debug!("Controller found");
+                    info!("Controller found");
                     let r = creep.upgrade_controller(&controller);
                     if r == ReturnCode::NotInRange {
-                        debug!("Trying to move closer to controller");
+                        info!("Trying to move closer to controller");
                         Self::move_near(creep, controller.pos(), memory);
                         true
                     } else if r != ReturnCode::Ok {
-                        warn!("couldn't upgrade: {:?}", r);
+                        info!("couldn't upgrade: {:?}", r);
                         false
                     } else {
                         true
@@ -92,7 +90,7 @@ impl CreepAction {
                 },
             }
         } else {
-            debug!("Energy is empty");
+            info!("Energy is empty");
             false
         };
 

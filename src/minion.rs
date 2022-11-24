@@ -50,7 +50,7 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
 
     let worker_type = memory.worker_type.to_owned();
 
-    info!("{:?}", memory.current_task);
+    // info!("{:?}", memory.current_task);
 
     match worker_type {
         minion::MinionType::SimpleWorker => {
@@ -62,9 +62,7 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
                 _ => {
                     // Basically ... If it's not one of the above, we'll just upgrade the
                     // controller
-                    let controller = creep.room().unwrap().controller().unwrap().try_id().unwrap();
-                    memory.current_task = Task::Upgrade { controller, worked_by: vec![] };
-                    CreepAction::upgrade(creep, &controller, memory)
+                    CreepAction::idle(creep, memory);
                 }
             }     
         },
