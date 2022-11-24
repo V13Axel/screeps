@@ -35,7 +35,7 @@ impl SpawnManager {
             .unwrap()
             .find(find::MY_CREEPS);
         let creeps_needed = _room_tasks.iter().fold(0, |total, tasks| {
-
+            info!("{:?}", tasks);
 
             total
         });

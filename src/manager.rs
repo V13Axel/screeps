@@ -1,9 +1,6 @@
-use std::{cmp::Ordering, collections::HashMap};
+use screeps::{Room, game};
 
-use log::info;
-use screeps::{Room, find, HasTypedId, game, SharedCreepProperties, MaybeHasTypedId, StructureSpawn, Part, Creep, Terrain, LookResult};
-
-use crate::{mem::{GameMemory, CreepMemory}, task::Task, minion::MinionType, util};
+use crate::mem::GameMemory;
 
 use self::{task::TaskManager, spawn::SpawnManager};
 

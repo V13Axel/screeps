@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use screeps::{Creep, SharedCreepProperties, game, ObjectId, MaybeHasTypedId};
+use screeps::{Creep, game, ObjectId, MaybeHasTypedId};
 use serde::{Serialize, Deserialize};
 use crate::mem::{CreepMemory, GameMemory};
 use crate::role::CreepAction;
@@ -75,9 +75,11 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
 pub fn run_creeps(memories: &mut HashMap<ObjectId<Creep>, CreepMemory>) {
     for creep in game::creeps().values() {
         if let Some(id) = creep.try_id() {
-            let name = creep.name();
-            let memory = memories.entry(id).or_default();
-            run_creep(&creep, memory);
+            run_creep(
+                &creep,
+                memories.entry(id)
+                    .or_default()
+            );
         }
     }
 }

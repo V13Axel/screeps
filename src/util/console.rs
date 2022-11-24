@@ -2,6 +2,7 @@ use js_sys::JsString;
 use web_sys::console;
 
 // What a crazy hack.
+#[allow(dead_code)]
 pub fn clear_console() {
     console::log_1(
         &JsString::from(
