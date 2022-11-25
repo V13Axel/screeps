@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 
 use log::info;
-use screeps::{Creep, game, ObjectId, MaybeHasTypedId};
+use screeps::{Creep, game, ObjectId, MaybeHasTypedId, SharedCreepProperties};
 use serde::{Serialize, Deserialize};
 use crate::mem::{CreepMemory, GameMemory};
 use crate::role::CreepAction;
@@ -39,6 +39,7 @@ impl Display for MinionType {
 }
 
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
+    // info!("{:?}", creep.name());
     if memory.current_path.is_some() {
         let path = memory.current_path.to_owned().unwrap();
         memory.current_path = match creep.move_by_path(&JsValue::from_str(&path.value)) {
@@ -87,12 +88,12 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
     }
 }
 
-pub fn run_creeps(memories: &mut HashMap<ObjectId<Creep>, CreepMemory>) {
+pub fn run_creeps(memories: &mut HashMap<String, CreepMemory>) {
     for creep in game::creeps().values() {
-        if let Some(id) = creep.try_id() {
+        if let Some(_) = creep.try_id() {
             run_creep(
                 &creep,
-                memories.entry(id)
+                memories.entry(creep.name())
                     .or_default()
             );
         }
@@ -102,10 +103,8 @@ pub fn run_creeps(memories: &mut HashMap<ObjectId<Creep>, CreepMemory>) {
 pub fn clean_up_dead_creeps(game_memory: &mut GameMemory) {
     let existing_names = game::creeps()
         .values()
-        .map(|creep| creep.try_id())
-        .filter(|id_option| id_option.is_none())
-        .map(|id_option| id_option.unwrap())
-        .collect::<Vec<ObjectId<Creep>>>();
+        .map(|creep| creep.name())
+        .collect::<Vec<String>>();
 
     game_memory.creeps.retain(|name, _| existing_names.contains(name));
 }

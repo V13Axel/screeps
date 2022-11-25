@@ -65,9 +65,9 @@ impl CreepAction {
     }
 
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
-        debug!("Trying to upgrade");
+        info!("Trying to upgrade");
         let keep_job = if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
-            debug!("Creep has energy");
+            info!("Creep has energy");
             match controller_id.resolve() {
                 Some(controller) => {
                     info!("Controller found");

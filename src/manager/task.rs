@@ -31,7 +31,7 @@ impl TaskManager {
 
             Self::assign_creep(
                 &creep,
-                &mut game_memory.creeps.entry(creep.try_id().unwrap()).or_default(),
+                &mut game_memory.creeps.entry(creep.name()).or_default(),
                 &mut game_memory.room_task_queues
             );
         }
@@ -51,6 +51,8 @@ impl TaskManager {
             .entry(creep_type.to_owned())
             .or_default();
 
+        info!("{:?}", creep_type);
+
         for task in tasks_for_creep.iter() {
             let assign: bool = match task {
                 Task::Harvest { node: _, worked_by, space_limit } => worked_by.len() < *space_limit,
@@ -60,7 +62,10 @@ impl TaskManager {
 
             if assign {
                 info!("Assigning task {:?} to {:?}", task, creep.name());
+
                 memory.current_task = task.to_owned();
+
+                return;
             } else {
                 info!("Not assigning anything special to {:?}", creep.name());
             }

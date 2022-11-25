@@ -13,7 +13,7 @@ pub struct GameMemory {
     pub needs_deserialized: bool,
 
     // Memory
-    pub creeps: HashMap<ObjectId<Creep>, CreepMemory>,
+    pub creeps: HashMap<String, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
