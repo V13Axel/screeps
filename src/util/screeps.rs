@@ -1,4 +1,4 @@
-use screeps::{Creep, game, MaybeHasTypedId, SharedCreepProperties};
+use screeps::{Creep, game, SharedCreepProperties};
 
 use crate::{mem::GameMemory, task::Task};
 

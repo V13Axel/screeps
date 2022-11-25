@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use screeps::{StructureSpawn, Room, find, Part, game, ResourceType, SpawnOptions};
-use serde_wasm_bindgen::to_value;
+use screeps::{StructureSpawn, Room, find, Part, game, ResourceType};
 
 use crate::{mem::{GameMemory, CreepMemory}, minion::MinionType, task::Task};
 
@@ -36,7 +35,7 @@ impl SpawnManager {
         }
     }
 
-    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Task>>, creep_memories: &mut HashMap<String, CreepMemory>) {
+    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Box<dyn Task>>>, creep_memories: &mut HashMap<String, CreepMemory>) {
         if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
             println!("Can't spawn right now, energy too low or already spawning");
 
@@ -49,23 +48,16 @@ impl SpawnManager {
 
         'outer: for (minion_type, tasks) in _room_tasks.iter() {
             for task in tasks.iter() {
-                match task {
-                    Task::Upgrade { controller, worked_by } => {
-                        if worked_by.len() < 2 {
-                            Self::spawn_it(minion_type, spawner, task, creep_memories);
+                if task.needs_creep() {
+                    Self::spawn_it(task.needs_type(), spawner, task, creep_memories);
 
-                            break 'outer;
-                        }
-                    },
-                    _ => {
-                        println!("A different task");
-                    }
+                    break 'outer;
                 }
             }
         }
     }
 
-    fn spawn_it(minion_type: &MinionType, spawner: StructureSpawn, task: &Task, creep_memories: &mut HashMap<String, CreepMemory>) {
+    fn spawn_it(minion_type: &MinionType, spawner: StructureSpawn, task: &dyn Task, creep_memories: &mut HashMap<String, CreepMemory>) {
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("{}{}", minion_type.to_string(), game::time());
 
@@ -76,7 +68,7 @@ impl SpawnManager {
 
         creep_memories.insert(new_name.to_owned(), CreepMemory {
             worker_type: minion_type.to_owned(),
-            current_task: task.to_owned(),
+            current_task: Box::new(task.to_owned()),
             current_path: None
         });
 

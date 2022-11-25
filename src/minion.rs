@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use log::info;
-use screeps::{Creep, game, ObjectId, MaybeHasTypedId, SharedCreepProperties};
+use screeps::{Creep, game, MaybeHasTypedId, SharedCreepProperties};
 use serde::{Serialize, Deserialize};
 use crate::mem::{CreepMemory, GameMemory};
 use crate::role::CreepAction;

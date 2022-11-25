@@ -18,8 +18,8 @@ pub struct GameMemory {
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
     // Task queues
-    pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Task>>>,
-    pub room_task_claims: HashMap<String, HashMap<Task, ObjectId<Creep>>>,
+    pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Box<dyn Task>>>>,
+    pub room_task_claims: HashMap<String, HashMap<Box<dyn Task>, ObjectId<Creep>>>,
 }
 
 impl GameMemory {
@@ -65,7 +65,7 @@ pub struct ControllerMemory {
 pub struct CreepMemory {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
-    pub current_task: Task,
+    pub current_task: Box<dyn Task>,
 }
 
 impl Default for CreepMemory {

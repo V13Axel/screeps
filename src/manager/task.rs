@@ -1,7 +1,7 @@
 use std::{collections::HashMap, cmp::Ordering};
 
 use log::info;
-use screeps::{Room, Creep, find, HasTypedId, MaybeHasTypedId, SharedCreepProperties};
+use screeps::{Room, Creep, find, HasTypedId, SharedCreepProperties};
 
 use crate::{mem::{GameMemory, CreepMemory}, util, minion::MinionType, task::Task};
 
@@ -40,7 +40,7 @@ impl TaskManager {
     fn assign_creep(
         creep: &Creep, 
         memory: &mut CreepMemory, 
-        room_task_queues: &mut HashMap<String, HashMap<MinionType, Vec<Task>>>
+        room_task_queues: &mut HashMap<String, HashMap<MinionType, Vec<Box<dyn Task>>>>
     ) {
         let creep_room = &creep.room().unwrap().name().to_string();
         let creep_type = &memory.worker_type;
@@ -84,12 +84,12 @@ impl TaskManager {
         }
     }
 
-    pub fn scan_room(&self, room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+    pub fn scan_room(&self, room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
         Self::_room_upgrade_task(room, room_task_queues);
         Self::_source_harvesting_tasks(room, room_task_queues);
     }
 
-    fn _room_upgrade_task(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+    fn _room_upgrade_task(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
         if !room_task_queues.contains_key(&MinionType::Upgrader) {
             // Controller to upgrade
             room_task_queues.insert(
@@ -99,7 +99,7 @@ impl TaskManager {
         }
     }
 
-    fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
+    fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
         // todo: Probably ought to have room_task_queues for refilling spawns
         let spawn = &room.find(find::MY_SPAWNS)[0];
         let room_harvester_tasks = room_task_queues.entry(MinionType::Harvester)

@@ -1,4 +1,3 @@
-use log::info;
 use screeps::{Room, game};
 
 use crate::mem::GameMemory;

@@ -1,10 +1,22 @@
-use screeps::{Room, Path};
+use screeps::{Room, Path, Position, RoomPosition};
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CreepPath {
     pub value: String
+}
+
+impl CreepPath {
+    fn determine(room: Room, start: Position, end: Position) -> Path {
+        CreepPath::from(room
+            .find_path(
+                &RoomPosition::from(start), 
+                &RoomPosition::from(end), 
+                None
+            )
+        )
+    }
 }
 
 impl From<Path> for CreepPath {

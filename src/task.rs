@@ -1,12 +1,48 @@
-use screeps::{Source, ConstructionSite, StructureController, ObjectId, StructureSpawn, Creep};
-use serde::{Serialize, Deserialize};
+use screeps::{ObjectWithId, Path, Creep, HasPosition};
 
-#[derive(Clone, Serialize, Deserialize, Debug, Hash, Eq, PartialEq)]
-pub enum Task {
-    Harvest { node: ObjectId<Source>, worked_by: Vec<ObjectId<Creep>>, space_limit: usize },
-    Build { site: ObjectId<ConstructionSite>, worked_by: Vec<ObjectId<Creep>> },
-    Upgrade { controller: ObjectId<StructureController>, worked_by: Vec<ObjectId<Creep>> },
-    Deposit { dest: ObjectId<StructureSpawn>, worked_by: Vec<ObjectId<Creep>> },
-    Idle,
+use crate::{mem::CreepMemory, util::path::CreepPath};
+
+mod upgrade;
+
+pub enum TaskStyle {
+    Perpetual,
+    Once,
 }
 
+pub struct TaskProps {
+    target: Option<dyn ObjectWithId + HasPosition>,
+    style: TaskStyle,
+    min_room_level: usize,
+}
+
+pub trait Task {
+    fn get_target(&self) -> Option<ObjectWithId>;
+    fn get_path_to(&self, creep: &Creep, memory: &mut CreepMemory) -> Path;
+    fn is_finished(&self) -> bool;
+}
+
+pub struct Upgrade {
+    props: TaskProps,
+}
+
+impl Task for Upgrade {
+    fn get_target(&self) -> Option<ObjectWithId> {
+        self.props.target
+    }
+
+    fn get_path_to(&self, creep: &Creep, memory: &mut CreepMemory) -> Path {
+        match self.get_target() {
+            Some(target) => CreepPath::determine(
+                creep.room()
+                    .unwrap(),
+                creep.pos(), 
+                target.pos(), 
+            ),
+            None => Path::from(vec![])
+        }
+    }
+
+    fn is_finished(&self) -> bool {
+        false
+    }
+}
