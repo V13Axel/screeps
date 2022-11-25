@@ -1,28 +1,28 @@
 use std::collections::HashMap;
 
-use screeps::{ObjectId, Structure, Creep};
+use screeps::{ObjectId, Structure};
 use serde::{Serialize, Deserialize};
 
 use crate::{minion::MinionType, task::Task, util::path::CreepPath};
 
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct GameMemory {
+pub struct GameMemory<'a> {
     // Administrative
     pub last_managers_tick: u32,
     pub needs_deserialized: bool,
 
     // Memory
-    pub creeps: HashMap<String, CreepMemory>,
+    pub creeps: HashMap<String, CreepMemory<'a>>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
     // Task queues
+    #[serde(skip_deserializing)]
     pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Box<dyn Task>>>>,
-    pub room_task_claims: HashMap<String, HashMap<Box<dyn Task>, ObjectId<Creep>>>,
 }
 
-impl GameMemory {
+impl GameMemory<'_> {
     pub fn default() -> Self {
         GameMemory { 
             needs_deserialized: true,
@@ -31,7 +31,6 @@ impl GameMemory {
             room_memories: HashMap::new(),
             structure_memories: HashMap::new(),
             room_task_queues: HashMap::new(),
-            room_task_claims: HashMap::new(),
         }
     }
 }
@@ -62,28 +61,30 @@ pub struct ControllerMemory {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct CreepMemory {
+pub struct CreepMemory<'a> {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
-    pub current_task: Box<dyn Task>,
+
+    #[serde(skip_deserializing)]
+    pub current_task: Option<&'a Box<dyn Task>>,
 }
 
-impl Default for CreepMemory {
-    fn default() -> CreepMemory {
+impl Default for CreepMemory<'_> {
+    fn default() -> CreepMemory<'static> {
         CreepMemory {
             worker_type: MinionType::SimpleWorker,
             current_path: None,
-            current_task: Task::Idle,
+            current_task: None,
         }
     }
 }
 
-impl Default for &CreepMemory {
-    fn default() -> &'static CreepMemory {
+impl Default for &CreepMemory<'_> {
+    fn default() -> &'static CreepMemory<'static> {
         &CreepMemory {
             worker_type: MinionType::SimpleWorker,
             current_path: None,
-            current_task: Task::Idle,
+            current_task: None,
         }
     }
 }

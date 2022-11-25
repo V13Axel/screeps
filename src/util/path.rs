@@ -8,11 +8,11 @@ pub struct CreepPath {
 }
 
 impl CreepPath {
-    fn determine(room: Room, start: Position, end: Position) -> Path {
+    pub fn determine(room: Room, start: &RoomPosition, end: &RoomPosition) -> Self {
         CreepPath::from(room
             .find_path(
-                &RoomPosition::from(start), 
-                &RoomPosition::from(end), 
+                &start, 
+                &end, 
                 None
             )
         )

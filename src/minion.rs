@@ -52,39 +52,39 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
 
     // info!("{:?}", memory.current_task);
 
-    match worker_type {
-        minion::MinionType::SimpleWorker => {
-            match memory.current_task {
-                Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
-                Task::Upgrade { controller, .. } => CreepAction::upgrade(creep, &controller, memory),
-                Task::Deposit { dest, .. } => CreepAction::deposit(creep, &dest.resolve().unwrap(), memory),
-                Task::Build { site, .. } => CreepAction::build(creep, &site.resolve().unwrap(), memory),
-                _ => {
-                    // Basically ... If it's not one of the above, we'll just upgrade the
-                    // controller
-                    CreepAction::idle(creep, memory);
-                }
-            }     
-        },
-        minion::MinionType::Upgrader => {
-            match memory.current_task {
-                Task::Idle =>  CreepAction::idle(creep, memory),
-                Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
-                Task::Upgrade { controller, .. } => CreepAction::upgrade(creep, &controller, memory),
-                _ => {
-                    CreepAction::idle(creep, memory);
-                }
-            }
-        },
-        minion::MinionType::Harvester => {
-            match memory.current_task {
-                Task::Idle => CreepAction::idle(creep, memory),
-                Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
-                Task::Deposit { dest, .. } => CreepAction::deposit(creep, &dest.resolve().unwrap(), memory),
-                _ => CreepAction::idle(creep, memory),
-            }
-        }
-    }
+    // match worker_type {
+    //     minion::MinionType::SimpleWorker => {
+    //         match memory.current_task {
+    //             Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
+    //             Task::Upgrade { controller, .. } => CreepAction::upgrade(creep, &controller, memory),
+    //             Task::Deposit { dest, .. } => CreepAction::deposit(creep, &dest.resolve().unwrap(), memory),
+    //             Task::Build { site, .. } => CreepAction::build(creep, &site.resolve().unwrap(), memory),
+    //             _ => {
+    //                 // Basically ... If it's not one of the above, we'll just upgrade the
+    //                 // controller
+    //                 CreepAction::idle(creep, memory);
+    //             }
+    //         }     
+    //     },
+    //     minion::MinionType::Upgrader => {
+    //         match memory.current_task {
+    //             Task::Idle =>  CreepAction::idle(creep, memory),
+    //             Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
+    //             Task::Upgrade { controller, .. } => CreepAction::upgrade(creep, &controller, memory),
+    //             _ => {
+    //                 CreepAction::idle(creep, memory);
+    //             }
+    //         }
+    //     },
+    //     minion::MinionType::Harvester => {
+    //         match memory.current_task {
+    //             Task::Idle => CreepAction::idle(creep, memory),
+    //             Task::Harvest { node, .. } => CreepAction::harvest(creep, &node, memory),
+    //             Task::Deposit { dest, .. } => CreepAction::deposit(creep, &dest.resolve().unwrap(), memory),
+    //             _ => CreepAction::idle(creep, memory),
+    //         }
+    //     }
+    // }
 }
 
 pub fn run_creeps(memories: &mut HashMap<String, CreepMemory>) {

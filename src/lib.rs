@@ -1,4 +1,4 @@
-use std::{cell::RefCell, panic};
+use std::{cell::RefCell, panic, borrow::BorrowMut};
 
 use js_sys::JsString;
 use log::*;
@@ -19,7 +19,7 @@ mod manager;
 mod task;
 
 thread_local! {
-    static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(
+    static GAME_MEMORY: RefCell<GameMemory<'static>> = RefCell::new(
         GameMemory::default()
     );
 }
@@ -53,7 +53,7 @@ pub fn game_loop(memory: &mut GameMemory) {
 pub fn memory_loop() {
     // Get our local heap memory and do the actual game logic
     GAME_MEMORY.with(|game_memory_refcell| {
-        let mut game_memory = game_memory_refcell.borrow_mut().to_owned();
+        let mut game_memory: GameMemory = game_memory_refcell.borrow_mut().to_owned();
 
         game_loop(&mut game_memory);
 
@@ -63,7 +63,7 @@ pub fn memory_loop() {
 
     // Serialize and save to memory. This is done separately to avoid weirdness.
     GAME_MEMORY.with(|game_memory_refcell| {
-        save_memory(game_memory_refcell.borrow_mut().to_owned());
+        save_memory(game_memory_refcell.into_inner());
     });
 
     debug!("Game loop finished: {}", game::time());

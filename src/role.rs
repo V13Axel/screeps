@@ -69,19 +69,13 @@ impl CreepAction {
                     let r = creep.upgrade_controller(&controller);
                     if r == ReturnCode::NotInRange {
                         Self::move_near(creep, controller.pos(), memory);
-                        true
                     } else if r != ReturnCode::Ok {
-                        false
                     } else {
-                        true
                     }
                 }
                 None => {
-                    false
                 },
             }
-        } else {
-
         };
 
         // if !keep_job {
@@ -128,35 +122,35 @@ impl CreepAction {
         // }
     }
 
-    pub fn build(creep: &Creep, site: &ConstructionSite, memory: &mut CreepMemory) {
-        if creep.pos().is_near_to(site.pos()) {
-            memory.current_task = match creep.build(&site) {
-                ReturnCode::Ok => Task::Idle,
-                code => {
-                    info!("{:?} - Building code {:?}", creep.name(), code);
-                
-                    memory.current_task.to_owned()
-                }
-            }
-        } else {
-            Self::move_near(creep, site.pos(), memory);
-        }
-    }
-
-    pub fn deposit(creep: &Creep, dest: &impl Transferable, memory: &mut CreepMemory) {
-        if creep.pos().is_near_to(dest.pos()) {
-            memory.current_path = None;
-
-            match creep.transfer(dest, ResourceType::Energy, None) {
-                ReturnCode::Ok => {
-                    memory.current_task = Task::Idle;
-                },
-                code => {
-                    info!("{:?}", code);
-                }
-            }
-        } else {
-            Self::move_near(creep, dest.pos(), memory)
-        }
-    }
+    // pub fn build(creep: &Creep, site: &ConstructionSite, memory: &mut CreepMemory) {
+    //     if creep.pos().is_near_to(site.pos()) {
+    //         memory.current_task = match creep.build(&site) {
+    //             ReturnCode::Ok => Task::Idle,
+    //             code => {
+    //                 info!("{:?} - Building code {:?}", creep.name(), code);
+    //             
+    //                 memory.current_task.to_owned()
+    //             }
+    //         }
+    //     } else {
+    //         Self::move_near(creep, site.pos(), memory);
+    //     }
+    // }
+    //
+    // pub fn deposit(creep: &Creep, dest: &impl Transferable, memory: &mut CreepMemory) {
+    //     if creep.pos().is_near_to(dest.pos()) {
+    //         memory.current_path = None;
+    //
+    //         match creep.transfer(dest, ResourceType::Energy, None) {
+    //             ReturnCode::Ok => {
+    //                 memory.current_task = Task::Idle;
+    //             },
+    //             code => {
+    //                 info!("{:?}", code);
+    //             }
+    //         }
+    //     } else {
+    //         Self::move_near(creep, dest.pos(), memory)
+    //     }
+    // }
 }
