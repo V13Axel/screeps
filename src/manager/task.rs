@@ -27,7 +27,7 @@ impl TaskManager {
                 continue;
             }
 
-            info!("{:?}", creep.name());
+            // info!("{:?}", creep.name());
 
             Self::assign_creep(
                 &creep,
@@ -61,6 +61,8 @@ impl TaskManager {
             if assign {
                 info!("Assigning task {:?} to {:?}", task, creep.name());
                 memory.current_task = task.to_owned();
+            } else {
+                info!("Not assigning anything special to {:?}", creep.name());
             }
         }
 
@@ -95,6 +97,8 @@ impl TaskManager {
     fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Task>>) {
         // todo: Probably ought to have room_task_queues for refilling spawns
         let spawn = &room.find(find::MY_SPAWNS)[0];
+        let room_harvester_tasks = room_task_queues.entry(MinionType::Harvester)
+            .or_default();
 
         let mut sources = room.find(find::SOURCES);
 
@@ -106,19 +110,39 @@ impl TaskManager {
             }
         });
 
+        // No need to keep going if we have the right number.
+        if sources.len() == room_harvester_tasks.len() {
+            return;
+        }
+
+        // Ok so ... if we accidentally have too many somehow, let's just clear it and start over
+        if sources.len() < room_harvester_tasks.len() {
+            room_harvester_tasks.clear();
+        }
+
         // Sources to harvest
         for source in sources.iter() {
             let space_limit = util::position::PositionCalculator::spaces_around(&room, source.pos());
 
-            room_task_queues.entry(MinionType::Harvester)
-                .or_default()
-                .push(
+            if !room_harvester_tasks
+                .iter()
+                .any(|task| -> bool {
+                    if let Task::Harvest { node, worked_by: _, space_limit: _ } = task {
+                        &source.id() == node
+                    } else {
+                        false
+                    }
+                })
+            {
+                info!("No task found for {:?}", source.id());
+                room_harvester_tasks.push(
                     Task::Harvest { 
                         node: source.id(), 
                         worked_by: vec![], 
                         space_limit 
                     }
                 );
+            }
         }
     }
 }
