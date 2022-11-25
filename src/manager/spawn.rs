@@ -49,7 +49,7 @@ impl SpawnManager {
         'outer: for (minion_type, tasks) in _room_tasks.iter() {
             for task in tasks.iter() {
                 if task.needs_creeps() {
-                    Self::spawn_it(&task.needed_type(), spawner, task, creep_memories);
+                    self.spawn_it(&task.needed_type(), spawner, task, creep_memories);
 
                     break 'outer;
                 }
@@ -57,7 +57,7 @@ impl SpawnManager {
         }
     }
 
-    fn spawn_it(minion_type: &MinionType, spawner: StructureSpawn, task: &Box<dyn Task>, creep_memories: &mut HashMap<String, CreepMemory>) {
+    fn spawn_it(&self, minion_type: &MinionType, spawner: StructureSpawn, task: &Box<dyn Task>, creep_memories: &mut HashMap<String, CreepMemory>) {
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("{}{}", minion_type.to_string(), game::time());
 
