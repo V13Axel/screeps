@@ -68,8 +68,9 @@ impl SpawnManager {
 
         creep_memories.insert(new_name.to_owned(), CreepMemory {
             worker_type: minion_type.to_owned(),
-            current_task: None,
-            current_path: None
+            current_task: Some(task.to_owned()),
+            current_path: None,
+            last_position: None,
         });
 
         spawner.spawn_creep(&parts, &new_name);

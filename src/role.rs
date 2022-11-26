@@ -1,10 +1,11 @@
 use log::{debug, info};
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, find, Position};
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, find, Position, SharedCreepProperties};
 use wasm_bindgen::JsValue;
 
-use crate::{util::path::CreepPath, mem::CreepMemory};
+use crate::{util::path::{CreepPath, MovementDistance}, mem::CreepMemory};
 
 pub struct CreepAction;
+
 
 impl CreepAction {
     pub fn idle(creep: &Creep, memory: &mut CreepMemory) {
@@ -21,7 +22,7 @@ impl CreepAction {
         memory.current_path = if creep.pos().is_equal_to(position) {
             None
         } else {
-            Self::do_movement(creep, &position, &memory.current_path)
+            Self::do_movement(creep, &position, &memory.current_path, MovementDistance::At)
         };
     }
     
@@ -30,12 +31,13 @@ impl CreepAction {
         memory.current_path = if creep.pos().is_near_to(position) {
             None
         } else {
-            Self::do_movement(creep, &position, &memory.current_path)
+            Self::do_movement(creep, &position, &memory.current_path, MovementDistance::Near)
         };
     }
 
 
-    fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>) -> Option<CreepPath> {
+    fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>, distance: MovementDistance) -> Option<CreepPath> {
+        info!("Running movement for {:?}", creep.name());
         let path = match current_path {
             Some(path) => path.to_owned(),
             None => {
@@ -44,6 +46,7 @@ impl CreepAction {
                     .unwrap(),
                         &RoomPosition::from(creep.pos()), 
                         &RoomPosition::from(position), 
+                    distance
                 )
             }
         };

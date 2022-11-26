@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use screeps::{ObjectId, Structure};
+use screeps::{ObjectId, Structure, Position};
 use serde::{Serialize, Deserialize};
 
 use crate::{minion::MinionType, task::Task, util::path::CreepPath};
@@ -64,6 +64,7 @@ pub struct ControllerMemory {
 pub struct CreepMemory {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
+    pub last_position: Option<Position>,
 
     #[serde(skip_deserializing)]
     pub current_task: Option<Box<dyn Task>>,
@@ -73,6 +74,7 @@ impl Default for CreepMemory {
     fn default() -> CreepMemory {
         CreepMemory {
             worker_type: MinionType::SimpleWorker,
+            last_position: None,
             current_path: None,
             current_task: None,
         }
@@ -83,6 +85,7 @@ impl Default for &CreepMemory {
     fn default() -> &'static CreepMemory {
         &CreepMemory {
             worker_type: MinionType::SimpleWorker,
+            last_position: None,
             current_path: None,
             current_task: None,
         }

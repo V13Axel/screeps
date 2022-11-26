@@ -1,6 +1,11 @@
-use screeps::{Room, Path, Position, RoomPosition};
+use screeps::{Room, Path, Position, RoomPosition, Step};
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
+
+pub enum MovementDistance {
+    At,
+    Near
+}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CreepPath {
@@ -8,14 +13,26 @@ pub struct CreepPath {
 }
 
 impl CreepPath {
-    pub fn determine(room: Room, start: &RoomPosition, end: &RoomPosition) -> Self {
-        CreepPath::from(room
+    pub fn determine(room: Room, start: &RoomPosition, end: &RoomPosition, distance: MovementDistance) -> Self {
+        let path = room
             .find_path(
                 &start, 
                 &end, 
                 None
-            )
-        )
+            );
+
+        match distance {
+            MovementDistance::At => CreepPath::from(path),
+            MovementDistance::Near => {
+                let mut vecpath = match path {
+                    Path::Vectorized(steps) => steps,
+                    Path::Serialized(steps) => Room::deserialize_path(&steps),
+                };
+                vecpath.pop();
+
+                CreepPath::from(Path::Vectorized(vecpath))
+            }
+        }
     }
 }
 
