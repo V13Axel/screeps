@@ -48,7 +48,13 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
         }
     }
 
-    let worker_type = memory.worker_type.to_owned();
+    if memory.current_task.is_some() {
+        let task = memory.current_task.to_owned();
+
+        task.unwrap().run(creep, memory);
+    }
+
+    // let worker_type = memory.worker_type.to_owned();
 
     // info!("{:?}", memory.current_task);
 

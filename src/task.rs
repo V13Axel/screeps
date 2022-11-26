@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display};
 
 use dyn_clone::DynClone;
+use log::info;
 use screeps::{Path, Creep, RoomObject, ObjectId, Room};
 use serde::{Serialize, Deserialize};
 
@@ -42,6 +43,7 @@ impl Default for TaskProps {
 }
 
 pub trait Task: Debug + DynClone {
+    fn run(&mut self, creep: &Creep, memory: &mut CreepMemory);
     fn set_target(&mut self, target: RoomObject);
     fn get_target(&self) -> Option<Box<RoomObject>>;
     fn get_path_to(&self, creep: &Creep, memory: &mut CreepMemory) -> CreepPath;
@@ -60,22 +62,6 @@ impl Serialize for dyn Task {
         self.get_props().serialize(serializer)
     }
 }
-
-// impl Deserialize for dyn Task {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//         where
-//             D: serde::Deserializer<'de> {
-//         Ok(Self {
-//             props: deserializer.into()
-//         })
-//     }
-// }
-
-// impl Debug for dyn Task {
-//     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-//         write!(f, "Series{{{}}}", self.get_props())
-//     }
-// }
 
 #[derive(Debug, Clone)]
 pub struct Upgrade {
@@ -97,6 +83,10 @@ impl Upgrade {
 }
 
 impl Task for Upgrade {
+    fn run(&mut self, creep: &Creep, memory: &mut CreepMemory) {
+        info!("Would upgrade");
+    }
+
     fn needed_type(&self) -> MinionType {
         MinionType::Upgrader
     }

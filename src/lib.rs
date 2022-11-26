@@ -19,7 +19,7 @@ mod manager;
 mod task;
 
 thread_local! {
-    static GAME_MEMORY: RefCell<GameMemory<'static>> = RefCell::new(
+    static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(
         GameMemory::default()
     );
 }

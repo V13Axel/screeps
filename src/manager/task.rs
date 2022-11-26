@@ -55,7 +55,7 @@ impl TaskManager {
 
         for task in tasks_for_creep.iter() {
             if task.needs_creeps() {
-                memory.current_task = Some(task);
+                memory.current_task = Some(task.to_owned());
 
                 break;
             }

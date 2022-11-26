@@ -7,13 +7,13 @@ use crate::{minion::MinionType, task::Task, util::path::CreepPath};
 
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct GameMemory<'a> {
+pub struct GameMemory {
     // Administrative
     pub last_managers_tick: u32,
     pub needs_deserialized: bool,
 
     // Memory
-    pub creeps: HashMap<String, CreepMemory<'a>>,
+    pub creeps: HashMap<String, CreepMemory>,
     pub room_memories: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
@@ -22,7 +22,7 @@ pub struct GameMemory<'a> {
     pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Box<dyn Task>>>>,
 }
 
-impl GameMemory<'_> {
+impl GameMemory {
     pub fn default() -> Self {
         GameMemory { 
             needs_deserialized: true,
@@ -61,16 +61,16 @@ pub struct ControllerMemory {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct CreepMemory<'a> {
+pub struct CreepMemory {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
 
     #[serde(skip_deserializing)]
-    pub current_task: Option<&'a Box<dyn Task>>,
+    pub current_task: Option<Box<dyn Task>>,
 }
 
-impl Default for CreepMemory<'_> {
-    fn default() -> CreepMemory<'static> {
+impl Default for CreepMemory {
+    fn default() -> CreepMemory {
         CreepMemory {
             worker_type: MinionType::SimpleWorker,
             current_path: None,
@@ -79,8 +79,8 @@ impl Default for CreepMemory<'_> {
     }
 }
 
-impl Default for &CreepMemory<'_> {
-    fn default() -> &'static CreepMemory<'static> {
+impl Default for &CreepMemory {
+    fn default() -> &'static CreepMemory {
         &CreepMemory {
             worker_type: MinionType::SimpleWorker,
             current_path: None,
