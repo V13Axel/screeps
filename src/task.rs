@@ -2,10 +2,10 @@ use std::fmt::{Debug, Display};
 
 use dyn_clone::DynClone;
 use log::info;
-use screeps::{Path, Creep, RoomObject, ObjectId, Room};
+use screeps::{Creep, ObjectId, Room, ReturnCode, ResourceType, Position, StructureController, RawObjectId, HasId, SharedCreepProperties, Source, HasTypedId, find};
 use serde::{Serialize, Deserialize};
 
-use crate::{mem::CreepMemory, util::path::CreepPath, minion::MinionType};
+use crate::{mem::CreepMemory, util::path::CreepPath, minion::MinionType, role::CreepAction};
 
 mod upgrade;
 
@@ -18,7 +18,7 @@ pub enum TaskStyle {
 #[derive(Debug, Serialize, Clone)]
 pub struct TaskProps {
     #[serde(skip_serializing)]
-    target: Option<Box<RoomObject>>,
+    target: Option<RawObjectId>,
 
     style: TaskStyle,
     min_room_level: usize,
@@ -43,14 +43,26 @@ impl Default for TaskProps {
 }
 
 pub trait Task: Debug + DynClone {
+    // Actionable results
     fn run(&mut self, creep: &Creep, memory: &mut CreepMemory);
-    fn set_target(&mut self, target: RoomObject);
-    fn get_target(&self) -> Option<Box<RoomObject>>;
     fn get_path_to(&self, creep: &Creep, memory: &mut CreepMemory) -> CreepPath;
-    fn is_finished(&self) -> bool;
-    fn needs_creeps(&self) -> bool;
-    fn needed_type(&self) -> MinionType;
+
+    // Target
+    fn get_target(&self) -> Option<RawObjectId>;
+    fn set_target(&mut self, target: RawObjectId);
+
+    // Props
     fn get_props(&self) -> TaskProps;
+    fn set_props(&mut self, props: TaskProps);
+
+    // Do we need creeps?
+    fn needs_creeps(&self) -> bool;
+
+    // What kind do we need?
+    fn needed_type(&self) -> MinionType;
+
+    // Has it been completed?
+    fn is_finished(&self) -> bool;
 }
 
 dyn_clone::clone_trait_object!(Task);
@@ -65,16 +77,21 @@ impl Serialize for dyn Task {
 
 #[derive(Debug, Clone)]
 pub struct Upgrade {
-    props: TaskProps,
+    pub props: TaskProps,
 }
 
 impl Upgrade {
+    pub fn resolve(&self) -> StructureController {
+        let controller_id: ObjectId<StructureController> = self.get_target().unwrap().into();
+        
+        controller_id.resolve().expect("How the hell did you manage that")
+    }
     pub fn for_room(room: &Room) -> Self {
         let controller = room.controller().unwrap().to_owned();
 
         Self {
             props: TaskProps {
-                target: Some(Box::new(controller.into())),
+                target: Some(controller.raw_id()),
                 style: TaskStyle::Perpetual,
                 ..Default::default()
             }
@@ -84,31 +101,50 @@ impl Upgrade {
 
 impl Task for Upgrade {
     fn run(&mut self, creep: &Creep, memory: &mut CreepMemory) {
-        info!("Would upgrade");
+        info!("Running {:?}", creep.name());
+        if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
+            info!("Creep has energy");
+            let controller = self.resolve();
+
+            match creep.upgrade_controller(&controller) {
+                ReturnCode::NotInRange => {
+                    CreepAction::move_near(creep, Position::from(controller.pos()), memory);
+                },
+                ReturnCode::NotEnough => {
+                    let mut sources: Vec<Source> = creep.room().unwrap().find(find::SOURCES);
+                    let source_id = sources.pop().expect("No sources in room?!").id();
+                    CreepAction::harvest(creep, &source_id, memory);
+                },
+                ReturnCode::Ok => {
+                    info!("Upgrade succeeded");
+                },
+                r => {
+                    info!("{:?}", r);
+                }
+            }
+        } else {
+            info!("Harvesting instead");
+            let mut sources: Vec<Source> = creep.room().unwrap().find(find::SOURCES);
+            let source_id = sources.pop().expect("No sources in room?!").id();
+            CreepAction::harvest(creep, &source_id, memory);
+        };
     }
 
-    fn needed_type(&self) -> MinionType {
-        MinionType::Upgrader
+    fn set_target(&mut self, target: RawObjectId) {
+        self.props.target = Some(target);
     }
 
-    fn get_target(&self) -> Option<Box<RoomObject>> {
-        self.props.target.to_owned()
-    }
-
-    fn set_target(&mut self, target: RoomObject) {
-        self.props.target = Some(Box::new(target));
+    fn get_target(&self) -> Option<RawObjectId> {
+        self.props.target
     }
 
     fn get_path_to(&self, creep: &Creep, memory: &mut CreepMemory) -> CreepPath {
-        match self.get_target() {
-            Some(target) => CreepPath::determine(
-                creep.room()
-                    .unwrap(),
-                &creep.pos(), 
-                &target.pos(), 
-            ),
-            None => CreepPath::from(Path::Serialized("".to_string()))
-        }
+        CreepPath::determine(
+            creep.room()
+                .unwrap(),
+            &creep.pos(), 
+            &self.resolve().pos(), 
+        )
     }
 
     fn is_finished(&self) -> bool {
@@ -119,7 +155,15 @@ impl Task for Upgrade {
         true
     }
 
+    fn needed_type(&self) -> MinionType {
+        MinionType::Upgrader
+    }
+
     fn get_props(&self) -> TaskProps {
         self.props.to_owned()
+    }
+
+    fn set_props(&mut self, props: TaskProps) {
+        self.props = props;
     }
 }

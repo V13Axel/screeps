@@ -1,4 +1,4 @@
-use std::{cell::RefCell, panic, borrow::BorrowMut};
+use std::{cell::RefCell, panic};
 
 use js_sys::JsString;
 use log::*;

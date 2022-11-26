@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
+use log::info;
 use screeps::{Creep, game, MaybeHasTypedId, SharedCreepProperties};
 use serde::{Serialize, Deserialize};
-use crate::mem::{CreepMemory, GameMemory};
-use crate::role::CreepAction;
-use wasm_bindgen::JsValue;
+use crate::{mem::{CreepMemory, GameMemory}, task::{Upgrade, TaskProps}};
 
-use crate::{minion, task::Task};
+use wasm_bindgen::JsValue;
 
 
 // Type structs
@@ -48,10 +47,13 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
         }
     }
 
+    info!("{:?}", memory.current_path);
     if memory.current_task.is_some() {
         let task = memory.current_task.to_owned();
 
         task.unwrap().run(creep, memory);
+    } else {
+        memory.current_task = Some(Box::new(Upgrade { props: TaskProps::default() }));
     }
 
     // let worker_type = memory.worker_type.to_owned();

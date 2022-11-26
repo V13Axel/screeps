@@ -1,8 +1,8 @@
 use log::{debug, info};
-use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, SharedCreepProperties, Source, HasPosition, RoomPosition, find, Position, Transferable, ConstructionSite};
+use screeps::{Creep, ObjectId, StructureController, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, find, Position};
 use wasm_bindgen::JsValue;
 
-use crate::{util::path::CreepPath, mem::CreepMemory, task::Task};
+use crate::{util::path::CreepPath, mem::CreepMemory};
 
 pub struct CreepAction;
 
@@ -89,10 +89,14 @@ impl CreepAction {
     }
 
     pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) { 
+        info!("Harvesting");
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
+            info!("Have more storage");
             let source = match source_id.resolve() {
                 Some(source) => {
+                    info!("Resolved source");
                     if creep.pos().is_near_to(source.pos()) {
+                        info!("Nearby");
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
                             false
@@ -100,6 +104,7 @@ impl CreepAction {
                             true
                         }
                     } else {
+                        info!("too far");
                         let result = creep.pos().is_near_to(source.pos());
                         let range = creep.pos().get_range_to(source.pos());
                         Self::move_near(creep, source.pos(), memory);
@@ -111,15 +116,9 @@ impl CreepAction {
 
             source
         } else {
+            info!("whut");
             false
         };
-
-        // if !keep_job {
-        //     debug!("{} not keeping job", creep.name());
-        //     memory.current_path = None;
-        //     memory.current_task = Task::Upgrade { controller: creep.room().unwrap().controller().unwrap().id(), worked_by: vec![] };
-        //     memory.worker_type = MinionType::SimpleWorker;
-        // }
     }
 
     // pub fn build(creep: &Creep, site: &ConstructionSite, memory: &mut CreepMemory) {
