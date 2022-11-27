@@ -46,10 +46,10 @@ impl SpawnManager {
             .unwrap()
             .find(find::MY_CREEPS);
 
-        'outer: for (minion_type, tasks) in _room_tasks.iter() {
-            for task in tasks.iter() {
+        'outer: for (minion_type, tasks) in _room_tasks.iter_mut() {
+            for task in tasks.iter_mut() {
                 if task.needs_creeps() {
-                    self.spawn_it(&task.needed_type(), spawner, task, creep_memories);
+                    self.spawn_it(minion_type, spawner, task, creep_memories);
 
                     break 'outer;
                 }

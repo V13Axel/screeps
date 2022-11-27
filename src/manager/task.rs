@@ -1,9 +1,9 @@
 use std::{collections::HashMap, cmp::Ordering};
 
-use log::info;
-use screeps::{Room, Creep, find, HasTypedId, SharedCreepProperties};
+use log::debug;
+use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, ObjectId, HasId};
 
-use crate::{mem::{GameMemory, CreepMemory}, util, minion::MinionType, task::{Task, Upgrade}};
+use crate::{mem::{GameMemory, CreepMemory}, util, minion::MinionType, task::{Task, upgrade::Upgrade, harvest::Harvest, TaskProps}};
 
 pub struct TaskManager {
     rooms: Vec<Room>,
@@ -27,8 +27,6 @@ impl TaskManager {
                 continue;
             }
 
-            // info!("{:?}", creep.name());
-
             Self::assign_creep(
                 &creep,
                 &mut game_memory.creeps.entry(creep.name()).or_default(),
@@ -51,17 +49,19 @@ impl TaskManager {
             .entry(creep_type.to_owned())
             .or_default();
 
-        info!("{:?}", creep_type);
+        debug!("{:?}", creep_type);
 
-        for task in tasks_for_creep.iter() {
+        for task in tasks_for_creep.iter_mut() {
             if task.needs_creeps() {
                 memory.current_task = Some(task.to_owned());
 
                 break;
             }
+
+            task.assign_creep(creep);
         }
 
-        // info!("{:?}", tasks_for_creep);
+        // debug!("{:?}", tasks_for_creep);
     }
 
     pub fn scan(&self, game_memory: &mut GameMemory) {
@@ -76,7 +76,7 @@ impl TaskManager {
 
     pub fn scan_room(&self, room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
         Self::_room_upgrade_task(room, room_task_queues);
-        // Self::_source_harvesting_tasks(room, room_task_queues);
+        Self::_source_harvesting_tasks(room, room_task_queues);
     }
 
     fn _room_upgrade_task(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
@@ -90,56 +90,47 @@ impl TaskManager {
         }
     }
 
-    // fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
-    //     // todo: Probably ought to have room_task_queues for refilling spawns
-    //     let spawn = &room.find(find::MY_SPAWNS)[0];
-    //     let room_harvester_tasks = room_task_queues.entry(MinionType::Harvester)
-    //         .or_default();
-    //
-    //     let mut sources = room.find(find::SOURCES);
-    //
-    //     sources.sort_by(|a, b| {
-    //         if spawn.pos().get_range_to(a) > spawn.pos().get_range_to(b) {
-    //             Ordering::Less
-    //         } else {
-    //             Ordering::Greater
-    //         }
-    //     });
-    //
-    //     // No need to keep going if we have the right number.
-    //     if sources.len() == room_harvester_tasks.len() {
-    //         return;
-    //     }
-    //
-    //     // Ok so ... if we accidentally have too many somehow, let's just clear it and start over
-    //     if sources.len() < room_harvester_tasks.len() {
-    //         room_harvester_tasks.clear();
-    //     }
-    //
-    //     // Sources to harvest
-    //     for source in sources.iter() {
-    //         let space_limit = util::position::PositionCalculator::spaces_around(&room, source.pos());
-    //
-    //         if !room_harvester_tasks
-    //             .iter()
-    //             .any(|task| -> bool {
-    //                 if let Task::Harvest { node, worked_by: _, space_limit: _ } = task {
-    //                     &source.id() == node
-    //                 } else {
-    //                     false
-    //                 }
-    //             })
-    //         {
-    //             info!("No task found for {:?}", source.id());
-    //             room_harvester_tasks.push(
-    //                 Task::Harvest { 
-    //                     node: source.id(), 
-    //                     worked_by: vec![], 
-    //                     space_limit 
-    //                 }
-    //             );
-    //         }
-    //     }
-    // }
+    fn _source_harvesting_tasks(room: &Room, room_task_queues: &mut HashMap<MinionType, Vec<Box<dyn Task>>>) {
+        // todo: Probably ought to have room_task_queues for refilling spawns
+        let spawn = &room.find(find::MY_SPAWNS)[0];
+        let room_harvester_tasks = room_task_queues.entry(MinionType::Harvester)
+            .or_default();
+
+        let mut sources = room.find(find::SOURCES);
+
+        sources.sort_by(|a, b| {
+            if spawn.pos().get_range_to(a) > spawn.pos().get_range_to(b) {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        });
+
+        // No need to keep going if we have the right number.
+        if sources.len() == room_harvester_tasks.len() {
+            return;
+        }
+
+        // Ok so ... if we accidentally have too many somehow, let's just clear it and start over
+        if sources.len() < room_harvester_tasks.len() {
+            room_harvester_tasks.clear();
+        }
+
+        // Sources to harvest
+        for source in sources.iter() {
+            let spaces_available = util::position::PositionCalculator::spaces_around(&room, source.pos());
+
+            if !room_harvester_tasks
+                .iter()
+                .any(|task| -> bool {
+                    task.get_target() == Some(source.raw_id())
+                })
+            {
+                debug!("No task found for {:?}", source.id());
+                let task = Harvest {props: TaskProps::default(), source_id: source.id(), spaces_available};
+                room_harvester_tasks.push(Box::new(task));
+            }
+        }
+    }
 }
 

@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 use crate::{mem::GameMemory, minion::clean_up_dead_creeps};
 
 mod logging;
-mod role;
+mod action;
 mod mem;
 mod util;
 mod minion;

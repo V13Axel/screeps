@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use log::info;
-use screeps::{Creep, game, MaybeHasTypedId, SharedCreepProperties, Position, Room};
+use log::debug;
+use screeps::{Creep, game, MaybeHasTypedId, SharedCreepProperties, Room};
 use serde::{Serialize, Deserialize};
-use crate::{mem::{CreepMemory, GameMemory}, task::{Upgrade, TaskProps}};
+use crate::mem::{CreepMemory, GameMemory};
 
 use wasm_bindgen::JsValue;
 
@@ -37,18 +37,20 @@ impl Display for MinionType {
 }
 
 pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
+    // TODO: Clean this up. Basically just a sanity check for whether the creep successfully
+    // actually moved.
     if memory.current_path.is_some() {
-        info!("Moving {:?}", creep.name());
+        debug!("Moving {:?}", creep.name());
         let path = memory.current_path.to_owned().unwrap();
 
         let mut unserialized = Room::deserialize_path(&path.value);
 
-        info!("{:?}", unserialized);
+        debug!("{:?}", unserialized);
 
         let last_position = unserialized.pop().unwrap();
         let creep_position = creep.pos();
 
-        info!("({:?}, {:?}) ({:?},{:?})", last_position.x, last_position.y, creep_position.x(), creep_position.y());
+        debug!("({:?}, {:?}) ({:?},{:?})", last_position.x, last_position.y, creep_position.x(), creep_position.y());
 
 
         if last_position.x == <u8 as Into<u32>>::into(creep_position.x()) && last_position.y == <u8 as Into<u32>>::into(creep_position.y()) {
@@ -58,7 +60,7 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
                 screeps::ReturnCode::Ok => Some(path),
                 screeps::ReturnCode::Tired => Some(path),
                 r => {
-                    info!("Returncode of move: {:?}", r);
+                    debug!("Returncode of move: {:?}", r);
 
                     None
                 }
@@ -68,20 +70,18 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
         return;
     }
 
-    info!("{:?}", memory.current_path);
+    debug!("{:?}", memory.current_path);
     if memory.current_task.is_some() {
         let mut task = memory.current_task.to_owned();
 
         task.as_mut().unwrap().run(creep, memory);
 
         memory.current_task = task;
-    } else {
-        memory.current_task = Some(Box::new(Upgrade { is_harvesting: false, props: TaskProps::default() }));
     }
 
     // let worker_type = memory.worker_type.to_owned();
 
-    // info!("{:?}", memory.current_task);
+    // debug!("{:?}", memory.current_task);
 
     // match worker_type {
     //     minion::MinionType::SimpleWorker => {
@@ -116,6 +116,7 @@ pub fn run_creep(creep: &Creep, memory: &mut CreepMemory) {
     //         }
     //     }
     // }
+    memory.last_position = Some(creep.pos().into());
 }
 
 pub fn run_creeps(memories: &mut HashMap<String, CreepMemory>) {
