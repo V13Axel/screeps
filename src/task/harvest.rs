@@ -1,5 +1,5 @@
 use log::info;
-use screeps::{Source, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId};
+use screeps::{Source, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId, find, HasPosition, SharedCreepProperties};
 
 use crate::action::CreepAction;
 
@@ -20,7 +20,7 @@ impl Task for Harvest {
             let source = match self.source_id.resolve() {
                 Some(source) => {
                     info!("Resolved source");
-                    if creep.pos().is_near_to(&source.pos()) {
+                    if creep.pos().is_near_to(source.pos()) {
                         info!("Nearby");
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
@@ -39,7 +39,20 @@ impl Task for Harvest {
 
             source
         } else {
-            info!("whut");
+            if let Some(spawn) = creep.room().unwrap().find(find::MY_SPAWNS).pop() {
+                if creep.pos().is_near_to(spawn.pos()) {
+                    match creep.transfer(&spawn, ResourceType::Energy, None) {
+                        ReturnCode::Ok => {
+                            info!("Transferred to spawn");
+                        },
+                        r => {
+                            info!("Tried {:?}", r);
+                        }
+                    }
+                } else {
+                    CreepAction::move_near(creep, spawn.pos(), memory);
+                }
+            }
             false
         };
     }
