@@ -1,5 +1,5 @@
 use log::info;
-use screeps::{Source, RawObjectId, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId};
+use screeps::{Source, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId};
 
 use crate::action::CreepAction;
 
@@ -30,8 +30,6 @@ impl Task for Harvest {
                         }
                     } else {
                         info!("too far");
-                        let result = creep.pos().is_near_to(&source.pos());
-                        let range = creep.pos().get_range_to(&source.pos());
                         CreepAction::move_near(creep, source.pos().into(), memory);
                         true
                     }

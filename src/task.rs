@@ -5,7 +5,7 @@ use dyn_clone::DynClone;
 use screeps::{Creep, ObjectId, RawObjectId};
 use serde::{Serialize, Deserialize};
 
-use crate::{mem::CreepMemory, util::path::CreepPath, minion::MinionType};
+use crate::{mem::CreepMemory, minion::MinionType};
 
 pub mod upgrade;
 pub mod harvest;

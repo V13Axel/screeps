@@ -1,7 +1,7 @@
 use log::debug;
 use screeps::{StructureController, ObjectId, game, Room, Creep, Source, ResourceType, find, SharedCreepProperties, HasId, HasTypedId, RawObjectId, ReturnCode, Position, MaybeHasTypedId};
 
-use crate::{mem::CreepMemory, action::CreepAction, util::path::{CreepPath, MovementDistance}, minion::MinionType};
+use crate::{mem::CreepMemory, action::CreepAction, minion::MinionType};
 
 use super::{TaskProps, TaskStyle, Task};
 

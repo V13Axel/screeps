@@ -1,4 +1,4 @@
-use screeps::{Room, Path, Position, RoomPosition, Step};
+use screeps::{Room, Path, RoomPosition};
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
 
