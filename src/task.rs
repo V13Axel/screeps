@@ -19,7 +19,9 @@ pub enum Action {
 impl Action {
     pub fn run(&self, creep: &Creep, memory: &mut CreepMemory) {
         match self {
-            Self::Idle => {},
+            Self::Idle => {
+                CreepAction::move_near(creep, creep.room().unwrap().controller().unwrap().pos().into(), memory);
+            },
             Self::Upgrade(controller_id) => CreepAction::upgrade(creep, controller_id, memory),
             Self::Harvest(source) => CreepAction::harvest(creep, source, memory),
             Self::Build(site_id) => CreepAction::build(creep, site_id, memory),

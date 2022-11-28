@@ -44,6 +44,7 @@ impl SpawnManager {
 
         for (minion_type, tasks) in _room_tasks.iter() {
             for task in tasks.iter() {
+                info!("Spawning needed {:?}", minion_type);
                 self.spawn_it(minion_type, spawner, task, creep_memories);
 
                 return;

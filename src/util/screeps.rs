@@ -1,3 +1,4 @@
+use log::info;
 use screeps::{Creep, game, SharedCreepProperties};
 
 use crate::{mem::{GameMemory, CreepMemory}, task::Action};
@@ -8,6 +9,7 @@ impl Screeps {
     pub fn get_idle_screeps(game_memory: &GameMemory) -> Vec<Creep> {
         game::creeps().values().filter(|creep| -> bool {
             if !game_memory.creeps.contains_key(&creep.name()) {
+                info!("Creep not found in game_memory.creeps for idle: {}", &creep.name());
                 return true;
             }
 

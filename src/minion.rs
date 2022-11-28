@@ -46,7 +46,6 @@ impl Minions {
             if let Some(creep) = creeps.get(&creep_name.to_owned()) {
                 let task = creep_memory.current_task.to_owned();
                 task.run(creep, creep_memory);
-
             }
         })
     }
