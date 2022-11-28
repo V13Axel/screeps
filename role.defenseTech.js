@@ -96,8 +96,11 @@ var roleDefenseTech = {
     wait: function(creep) {
         let towers = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return structure.structureType == STRUCTURE_TOWER;
+                return structure.structureType == STRUCTURE_TOWER && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
+        });
+        towers.sort((a, b) => {
+            return a.store.getFreeCapacity(RESOURCE_ENERGY) > b.store.getFreeCapacity(RESOURCE_ENERGY)
         });
         creep.moveTo(towers[0]);
 

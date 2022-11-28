@@ -55,7 +55,8 @@ var roleHarvester = {
         var targets = creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return (structure.structureType == STRUCTURE_CONTAINER ||
-                        structure.structureType == STRUCTURE_STORAGE) && 
+                        structure.structureType == STRUCTURE_STORAGE ||
+                        structure.structureType == STRUCTURE_EXTENSION) && 
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
             }
         });
@@ -67,6 +68,8 @@ var roleHarvester = {
 
         if(targets.length > 0) {
             let attempt = creep.transfer(targets[0], RESOURCE_ENERGY);
+
+            console.log(attempt);
 
             switch (attempt) {
                 case ERR_NOT_IN_RANGE:
@@ -82,6 +85,7 @@ var roleHarvester = {
                     break;
             }
         } else {
+            console.log("No targets?");
             creep.moveTo(Game.spawns['Spawn1']);
         }
     },

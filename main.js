@@ -66,11 +66,11 @@ function roomLoop(room) {
                     creeps.length < desiredNumber &&
                     activeSpawn.room.energyAvailable >= 300
             ) {
-                let body = roleDetails.definition;
-                // let body = spawnManager.spawnGivenBudget(
-                //     roleDetails,
-                //     Math.max(activeSpawn.room.energyAvailable * .8, 300)
-                // );
+                // let body = roleDetails.definition;
+                let body = spawnManager.spawnGivenBudget(
+                    roleDetails,
+                    Math.max(activeSpawn.room.energyAvailable * .8, 300)
+                );
                 let name = role + Game.time;
                 let memory = { memory: { role } };
 
