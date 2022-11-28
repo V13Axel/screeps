@@ -37,7 +37,7 @@ module.exports = {
 
             let maintenanceNeeded = tower.room.find(FIND_STRUCTURES, {
                 filter: structure => {
-                    if(structure.structureType == STRUCTURE_WALL) {
+                    if(structure.structureType == STRUCTURE_WALL && structure.hits > 10000) {
                         return false;
                     }
                     return structure.hits < (structure.hitsMax * 0.9)
