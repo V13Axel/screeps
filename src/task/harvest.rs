@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use log::info;
-use screeps::{Source, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId, find, HasPosition, SharedCreepProperties};
+use screeps::{Source, ObjectId, ReturnCode, ResourceType, find, HasPosition, SharedCreepProperties};
 
 use crate::{action::CreepAction, mem::CreepMemory};
 
-use super::{Task, TaskProps};
+use super::TaskProps;
 
 #[derive(Debug, Clone)]
 pub struct Harvest {
@@ -14,22 +12,8 @@ pub struct Harvest {
     pub spaces_available: usize,
 }
 
-impl Task for Harvest {
-    fn get_workable_name(&self) -> super::WorkableTask {
-        super::WorkableTask::Upgrade
-    }
-
-    fn run_workers(&mut self, creep_memories: &mut HashMap<String, CreepMemory>) {
-        self.props.clean_up_workers();
-
-        for creep_id in self.props.worked_by.to_owned().iter() {
-            if let Some(creep) = creep_id.resolve() {
-                self.run(&creep, creep_memories.entry(creep.name()).or_default());
-            }
-        }
-    }
-
-    fn run(&mut self, creep: &screeps::Creep, memory: &mut crate::mem::CreepMemory) {
+impl Harvest {
+    fn run(&mut self, creep: &screeps::Creep, memory: &mut CreepMemory) {
         info!("Harvesting");
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
             info!("Have more storage");
@@ -71,38 +55,5 @@ impl Task for Harvest {
             }
             false
         };
-    }
-
-    fn assign_creep(&mut self, creep: &Creep) {
-        self.props.worked_by.push(creep.try_id().unwrap())
-    }
-
-    fn get_props(&self) -> super::TaskProps {
-        self.props.to_owned()
-    }
-
-    fn set_props(&mut self, props: super::TaskProps) {
-        self.props = props;
-    }
-
-    fn get_target(&self) -> Option<screeps::RawObjectId> {
-        Some(self.source_id.into())
-    }
-
-    fn set_target(&mut self, target: screeps::RawObjectId) {
-        self.source_id = target.into();
-    }
-
-    fn needed_type(&self) -> crate::minion::MinionType {
-        crate::minion::MinionType::Harvester
-    }
-
-    fn needs_creeps(&mut self) -> bool {
-        self.props.clean_up_workers();
-        self.props.worked_by.len() < self.spaces_available
-    }
-
-    fn is_finished(&self) -> bool {
-        false
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use screeps::{ObjectId, Structure, Position};
 use serde::{Serialize, Deserialize};
 
-use crate::{minion::MinionType, task::{Task, WorkableTask}, util::path::CreepPath, action::ActionStep};
+use crate::{minion::MinionType, task::Action, util::path::CreepPath, action::ActionStep};
 
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -18,8 +18,7 @@ pub struct GameMemory {
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
     // Task queues
-    #[serde(skip_deserializing)]
-    pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Box<dyn Task>>>>,
+    pub room_task_queues: HashMap<String, HashMap<MinionType, Vec<Action>>>,
 }
 
 impl GameMemory {
@@ -65,7 +64,7 @@ pub struct CreepMemory {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
     pub last_position: Option<Position>,
-    pub current_task: WorkableTask,
+    pub current_task: Action,
     pub current_task_step: Option<ActionStep>,
 }
 
@@ -75,7 +74,7 @@ impl Default for CreepMemory {
             worker_type: MinionType::SimpleWorker,
             last_position: None,
             current_path: None,
-            current_task: WorkableTask::Idle,
+            current_task: Action::Idle,
             current_task_step: None,
         }
     }
@@ -87,7 +86,7 @@ impl Default for &CreepMemory {
             worker_type: MinionType::SimpleWorker,
             last_position: None,
             current_path: None,
-            current_task: WorkableTask::Idle,
+            current_task: Action::Idle,
             current_task_step: None,
         }
     }

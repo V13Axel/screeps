@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use log::info;
-use screeps::{StructureSpawn, Room, find, Part, game, ResourceType};
+use screeps::{StructureSpawn, Room, find, Part, game};
 
-use crate::{mem::{GameMemory, CreepMemory}, minion::MinionType, task::Task};
+use crate::{mem::{GameMemory, CreepMemory}, minion::MinionType, task::Action};
 
 pub struct SpawnManager {
     spawners: Vec<StructureSpawn>,
@@ -35,26 +35,23 @@ impl SpawnManager {
         }
     }
 
-    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Box<dyn Task>>>, creep_memories: &mut HashMap<String, CreepMemory>) {
+    pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Action>>, creep_memories: &mut HashMap<String, CreepMemory>) {
         // if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
         //     info!("Can't spawn right now, energy too low or already spawning");
         //
         //     return;
         // }
 
-        'outer: for (minion_type, tasks) in _room_tasks.iter_mut() {
-            for task in tasks.iter_mut() {
-                info!("Spawner task {:?}", task);
-                if task.needs_creeps() {
-                    self.spawn_it(minion_type, spawner, task, creep_memories);
+        for (minion_type, tasks) in _room_tasks.iter() {
+            for task in tasks.iter() {
+                self.spawn_it(minion_type, spawner, task, creep_memories);
 
-                    break 'outer;
-                }
+                return;
             }
         }
     }
 
-    fn spawn_it(&self, minion_type: &MinionType, spawner: StructureSpawn, task: &Box<dyn Task>, creep_memories: &mut HashMap<String, CreepMemory>) {
+    fn spawn_it(&self, minion_type: &MinionType, spawner: StructureSpawn, task: &Action, creep_memories: &mut HashMap<String, CreepMemory>) {
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("{}{}", minion_type.to_string(), game::time());
 

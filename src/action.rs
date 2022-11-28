@@ -1,9 +1,9 @@
 use log::{debug, info};
-use screeps::{Creep, ObjectId, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, Position, SharedCreepProperties, StructureContainer, StructureController, ConstructionSite};
+use screeps::{Creep, ObjectId, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, Position, SharedCreepProperties, StructureController, ConstructionSite};
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
 
-use crate::{util::path::{CreepPath, MovementDistance}, mem::CreepMemory};
+use crate::{util::path::{CreepPath, MovementDistance}, mem::CreepMemory, task::Action};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub enum ActionStep {
@@ -35,7 +35,6 @@ impl CreepAction {
         };
     }
 
-
     fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>, distance: MovementDistance) -> Option<CreepPath> {
         info!("Running movement for {:?}", creep.name());
         let path = match current_path {
@@ -65,8 +64,7 @@ impl CreepAction {
         }
     }
 
-
-    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) { 
+    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) {
         debug!("Harvesting");
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
             debug!("Have more storage");
@@ -95,5 +93,17 @@ impl CreepAction {
             debug!("whut");
             false
         };
+    }
+
+    pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
+        if let Some(controller) = controller_id.resolve() {
+            info!("Upgrade called");
+        } else {
+            memory.current_task = Action::Idle;
+        }
+    }
+
+    pub fn build(creep: &Creep, site: &ObjectId<ConstructionSite>, memory: &mut CreepMemory) {
+        info!("Build called");
     }
 }
