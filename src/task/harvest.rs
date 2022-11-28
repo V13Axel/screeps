@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use log::info;
 use screeps::{Source, ObjectId, ReturnCode, ResourceType, Creep, MaybeHasTypedId, find, HasPosition, SharedCreepProperties};
 
-use crate::action::CreepAction;
+use crate::{action::CreepAction, mem::CreepMemory};
 
 use super::{Task, TaskProps};
 
@@ -13,6 +15,20 @@ pub struct Harvest {
 }
 
 impl Task for Harvest {
+    fn get_workable_name(&self) -> super::WorkableTask {
+        super::WorkableTask::Upgrade
+    }
+
+    fn run_workers(&mut self, creep_memories: &mut HashMap<String, CreepMemory>) {
+        self.props.clean_up_workers();
+
+        for creep_id in self.props.worked_by.to_owned().iter() {
+            if let Some(creep) = creep_id.resolve() {
+                self.run(&creep, creep_memories.entry(creep.name()).or_default());
+            }
+        }
+    }
+
     fn run(&mut self, creep: &screeps::Creep, memory: &mut crate::mem::CreepMemory) {
         info!("Harvesting");
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {

@@ -4,11 +4,12 @@ use js_sys::JsString;
 use log::*;
 
 use manager::Managers;
+use minion::Minions;
 use screeps::{RawMemory, game};
 
 use wasm_bindgen::prelude::*;
 
-use crate::{mem::GameMemory, minion::clean_up_dead_creeps};
+use crate::mem::GameMemory;
 
 mod logging;
 mod action;
@@ -30,11 +31,10 @@ thread_local! {
 *
 */
 pub fn game_loop(memory: &mut GameMemory) {
-    clean_up_dead_creeps(memory);
+    Minions::clean_up_dead_creeps(memory);
 
     Managers::run(memory);
-
-    minion::run_creeps(&mut memory.creeps);
+    Minions::run(memory);
 }
 
 /**

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, cmp::Ordering};
 
-use log::debug;
+use log::{debug, info};
 use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, HasId};
 
 use crate::{mem::{GameMemory, CreepMemory}, util, minion::MinionType, task::{Task, upgrade::Upgrade, harvest::Harvest, TaskProps}};
@@ -49,19 +49,16 @@ impl TaskManager {
             .entry(creep_type.to_owned())
             .or_default();
 
-        debug!("{:?}", creep_type);
+        // info!("Assigning for {:?}", creep_type);
+        // info!("{:?}", tasks_for_creep);
 
         for task in tasks_for_creep.iter_mut() {
-            if task.needs_creeps() {
-                memory.current_task = Some(task.to_owned());
-
+            if !task.needs_creeps() {
                 break;
             }
 
             task.assign_creep(creep);
         }
-
-        // debug!("{:?}", tasks_for_creep);
     }
 
     pub fn scan(&self, game_memory: &mut GameMemory) {

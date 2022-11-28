@@ -1,6 +1,6 @@
 use screeps::{Creep, game, SharedCreepProperties};
 
-use crate::mem::GameMemory;
+use crate::{mem::GameMemory, task::WorkableTask};
 
 pub struct Screeps {}
 
@@ -11,7 +11,7 @@ impl Screeps {
                 return true;
             }
 
-            game_memory.creeps.get(&creep.name()).unwrap().current_task.is_none()
+            game_memory.creeps.get(&creep.name()).unwrap().current_task == WorkableTask::Idle
         }).collect()
     }
 }

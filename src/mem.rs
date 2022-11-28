@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use screeps::{ObjectId, Structure, Position};
 use serde::{Serialize, Deserialize};
 
-use crate::{minion::MinionType, task::Task, util::path::CreepPath};
+use crate::{minion::MinionType, task::{Task, WorkableTask}, util::path::CreepPath, action::ActionStep};
 
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -65,9 +65,8 @@ pub struct CreepMemory {
     pub worker_type: MinionType,
     pub current_path: Option<CreepPath>,
     pub last_position: Option<Position>,
-
-    #[serde(skip_deserializing)]
-    pub current_task: Option<Box<dyn Task>>,
+    pub current_task: WorkableTask,
+    pub current_task_step: Option<ActionStep>,
 }
 
 impl Default for CreepMemory {
@@ -76,7 +75,8 @@ impl Default for CreepMemory {
             worker_type: MinionType::SimpleWorker,
             last_position: None,
             current_path: None,
-            current_task: None,
+            current_task: WorkableTask::Idle,
+            current_task_step: None,
         }
     }
 }
@@ -87,7 +87,8 @@ impl Default for &CreepMemory {
             worker_type: MinionType::SimpleWorker,
             last_position: None,
             current_path: None,
-            current_task: None,
+            current_task: WorkableTask::Idle,
+            current_task_step: None,
         }
     }
 }

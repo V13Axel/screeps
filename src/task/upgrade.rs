@@ -1,7 +1,9 @@
-use log::debug;
+use std::collections::HashMap;
+
+use log::{debug, info};
 use screeps::{StructureController, ObjectId, game, Room, Creep, Source, ResourceType, find, SharedCreepProperties, HasId, HasTypedId, RawObjectId, ReturnCode, Position, MaybeHasTypedId};
 
-use crate::{mem::CreepMemory, action::CreepAction, minion::MinionType};
+use crate::{mem::CreepMemory, action::{CreepAction, ActionStep}, minion::MinionType};
 
 use super::{TaskProps, TaskStyle, Task};
 
@@ -40,46 +42,72 @@ impl Upgrade {
 }
 
 impl Task for Upgrade {
+    fn get_workable_name(&self) -> super::WorkableTask {
+        super::WorkableTask::Upgrade
+    }
+
+    fn run_workers(&mut self, creep_memories: &mut HashMap<String, CreepMemory>) {
+        self.props.clean_up_workers();
+
+        for creep_id in self.props.worked_by.to_owned().iter() {
+            if let Some(creep) = creep_id.resolve() {
+                self.run(&creep, creep_memories.entry(creep.name()).or_default());
+            }
+        }
+    }
+
     fn run(&mut self, creep: &Creep, memory: &mut CreepMemory) {
-        debug!("Running {:?}", creep.name());
-        if self.is_harvesting {
-            debug!("Is harvesting");
-            let mut sources: Vec<Source> = creep.room().unwrap().find(find::SOURCES);
-            let source_id = sources.pop().expect("No sources in room?!").id();
-            CreepAction::harvest(creep, &source_id, memory);
-            if creep.store().get_free_capacity(Some(ResourceType::Energy)) == 0 {
-                debug!("Harvesting stopped");
-                self.is_harvesting = false;
-            }
-        } else {
-            if creep.store().get_used_capacity(Some(ResourceType::Energy)) > 0 {
-                debug!("Creep has energy");
-                let controller = self.resolve();
+        info!("Running {:?}", creep.name());
+        memory.current_task_step = match memory.current_task_step {
+            Some(step) => match step {
+                ActionStep::Harvesting => {
+                    if creep.store().get_free_capacity(Some(ResourceType::Energy)) == 0 {
+                        Some(ActionStep::Upgrading)
+                    } else {
+                        let mut sources = creep.room().unwrap().find(find::SOURCES);
+                        let source_id = sources.pop().unwrap();
 
-                match creep.upgrade_controller(&controller) {
-                    ReturnCode::NotInRange => {
-                        debug!("Not in range, moving");
-                        CreepAction::move_near(creep, Position::from(controller.pos()), memory);
-                    },
-                    ReturnCode::NotEnough => {
-                        debug!("Not enough energy, moving closer");
-                        let mut sources: Vec<Source> = creep.room().unwrap().find(find::SOURCES);
-                        let source_id = sources.pop().expect("No sources in room?!").id();
+                        CreepAction::harvest(creep, &source_id.id(), memory);
 
-                        self.is_harvesting = true;
-                        CreepAction::harvest(creep, &source_id, memory);
-                    },
-                    ReturnCode::Ok => {
-                        debug!("Upgrade succeeded");
-                    },
-                    r => {
-                        debug!("{:?}", r);
+                        Some(ActionStep::Harvesting)
                     }
-                }
-            } else {
-                debug!("grrrr");
-                self.is_harvesting = true;
-            }
+                },
+                ActionStep::Upgrading => {
+                    if creep.store().get_used_capacity(Some(ResourceType::Energy)) == 0 {
+                        Some(ActionStep::Harvesting)
+                    } else {
+                        info!("Creep has energy");
+                        let controller = self.resolve();
+
+                        match creep.upgrade_controller(&controller) {
+                            ReturnCode::NotInRange => {
+                                info!("Not in range, moving");
+                                CreepAction::move_near(creep, Position::from(controller.pos()), memory);
+                                Some(ActionStep::Upgrading)
+                            },
+                            ReturnCode::NotEnough => {
+                                Some(ActionStep::Harvesting)
+                            },
+                            ReturnCode::Ok => {
+                                info!("Upgrade succeeded");
+                                Some(ActionStep::Upgrading)
+                            },
+                            r => {
+                                info!("Upgrade error by {:?}: {:?}", creep.name(), r);
+                                Some(ActionStep::Upgrading)
+                            }
+                        }
+                        
+                    }
+                },
+                ActionStep::CollectingFrom => {
+                    // For now, this just sets to harvesting... but later maybe it'll
+                    // find the nearest full container and use it?
+                    Some(ActionStep::Harvesting)
+                },
+                _ => Some(ActionStep::Harvesting)
+            },
+            None => Some(ActionStep::Harvesting)
         };
     }
 
@@ -97,10 +125,12 @@ impl Task for Upgrade {
 
     fn needs_creeps(&mut self) -> bool {
         self.props.clean_up_workers();
+        info!("Upgrade workers length: {}", self.props.worked_by.len());
         self.props.worked_by.len() < 4
     }
 
     fn assign_creep(&mut self, creep: &Creep) {
+        info!("Assigning creep to upgrade: {:?}", creep.name());
         self.props.worked_by.push(creep.try_id().unwrap())
     }
 

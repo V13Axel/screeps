@@ -1,11 +1,19 @@
 use log::{debug, info};
-use screeps::{Creep, ObjectId, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, Position, SharedCreepProperties};
+use screeps::{Creep, ObjectId, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, Position, SharedCreepProperties, StructureContainer, StructureController, ConstructionSite};
+use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
 
 use crate::{util::path::{CreepPath, MovementDistance}, mem::CreepMemory};
 
-pub struct CreepAction;
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum ActionStep {
+    Harvesting,
+    CollectingFrom,
+    Upgrading,
+    Building,
+}
 
+pub struct CreepAction;
 
 impl CreepAction {
     // Gets you to the position
@@ -59,14 +67,14 @@ impl CreepAction {
 
 
     pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) { 
-        info!("Harvesting");
+        debug!("Harvesting");
         if creep.store().get_free_capacity(Some(ResourceType::Energy)) > 0 {
-            info!("Have more storage");
+            debug!("Have more storage");
             let source = match source_id.resolve() {
                 Some(source) => {
-                    info!("Resolved source");
+                    debug!("Resolved source");
                     if creep.pos().is_near_to(source.pos()) {
-                        info!("Nearby");
+                        debug!("Nearby");
                         let r = creep.harvest(&source);
                         if r != ReturnCode::Ok {
                             false
@@ -74,7 +82,7 @@ impl CreepAction {
                             true
                         }
                     } else {
-                        info!("too far");
+                        debug!("too far");
                         Self::move_near(creep, source.pos(), memory);
                         true
                     }
@@ -84,7 +92,7 @@ impl CreepAction {
 
             source
         } else {
-            info!("whut");
+            debug!("whut");
             false
         };
     }

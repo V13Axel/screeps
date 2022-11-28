@@ -36,14 +36,15 @@ impl SpawnManager {
     }
 
     pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Box<dyn Task>>>, creep_memories: &mut HashMap<String, CreepMemory>) {
-        if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
-            println!("Can't spawn right now, energy too low or already spawning");
-
-            return;
-        }
+        // if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
+        //     info!("Can't spawn right now, energy too low or already spawning");
+        //
+        //     return;
+        // }
 
         'outer: for (minion_type, tasks) in _room_tasks.iter_mut() {
             for task in tasks.iter_mut() {
+                info!("Spawner task {:?}", task);
                 if task.needs_creeps() {
                     self.spawn_it(minion_type, spawner, task, creep_memories);
 
@@ -64,9 +65,7 @@ impl SpawnManager {
 
         creep_memories.insert(new_name.to_owned(), CreepMemory {
             worker_type: minion_type.to_owned(),
-            current_task: Some(task.to_owned()),
-            current_path: None,
-            last_position: None,
+            ..Default::default()
         });
 
         spawner.spawn_creep(&parts, &new_name);

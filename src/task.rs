@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::{fmt::{Debug, Display}, collections::HashMap};
 
 use dyn_clone::DynClone;
 
@@ -16,6 +16,14 @@ pub enum TaskStyle {
     Once,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum WorkableTask {
+    Idle,
+    Upgrade,
+    Harvest,
+    Build,
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct TaskProps {
     target: Option<RawObjectId>,
@@ -25,6 +33,10 @@ pub struct TaskProps {
 }
 
 impl TaskProps {
+    pub fn includes(&self, creep_id: ObjectId<Creep>) -> bool {
+        self.worked_by.contains(&creep_id)
+    }
+
     pub fn clean_up_workers(&mut self) {
         self.worked_by.retain(|creep_id| creep_id.resolve().is_some())
     }
@@ -50,6 +62,7 @@ impl Default for TaskProps {
 pub trait Task: Debug + DynClone {
     // Actionable results
     fn run(&mut self, creep: &Creep, memory: &mut CreepMemory);
+    fn run_workers(&mut self, creep_memories: &mut HashMap<String, CreepMemory>);
 
     // Target
     fn get_target(&self) -> Option<RawObjectId>;
@@ -58,6 +71,7 @@ pub trait Task: Debug + DynClone {
     // Props
     fn get_props(&self) -> TaskProps;
     fn set_props(&mut self, props: TaskProps);
+    fn get_workable_name(&self) -> WorkableTask;
 
     // Do we need creeps?
     fn needs_creeps(&mut self) -> bool;
