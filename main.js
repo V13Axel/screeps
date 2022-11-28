@@ -60,7 +60,29 @@ function roomLoop(room) {
                 roleDetails.run(creep)
             });
 
-            startedSpawning = spawnManager.spawnIfNecessary(activeSpawn, creeps, desiredNumber, roleDetails);
+            if(
+                !activeSpawn.spawning &&
+                    !startedSpawning &&
+                    creeps.length < desiredNumber &&
+                    activeSpawn.room.energyAvailable >= 300
+            ) {
+                let body = roleDetails.definition;
+                // let body = spawnManager.spawnGivenBudget(
+                //     roleDetails,
+                //     Math.max(activeSpawn.room.energyAvailable * .8, 300)
+                // );
+                let name = role + Game.time;
+                let memory = { memory: { role } };
+
+                startedSpawning = true;
+
+                let result = activeSpawn.spawnCreep(
+                    body,
+                    name,
+                    memory
+                );
+            } 
+
 
             if(creeps.length > 0 && creeps.length > desiredNumber) {
                 creeps[0].suicide();

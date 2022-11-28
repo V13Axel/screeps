@@ -37,12 +37,15 @@ module.exports = {
 
             let maintenanceNeeded = tower.room.find(FIND_STRUCTURES, {
                 filter: structure => {
-                    return structure.hits < structure.hitsMax;
+                    if(structure.structureType == STRUCTURE_WALL) {
+                        return false;
+                    }
+                    return structure.hits < (structure.hitsMax * 0.9)
+                        && structure.hits < 5000;
                 }
             });
 
             maintenanceNeeded.sort((a, b) => a.hits < b.hits);
-            maintenanceNeeded.sort((a, b) => ((a.hits / a.hitsMax) * 100) < ((b.hits / b.hitsMax) * 100));
 
             if(maintenanceNeeded.length > 0) {
                 tower.repair(maintenanceNeeded[0]);
