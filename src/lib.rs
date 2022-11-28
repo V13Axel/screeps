@@ -31,8 +31,10 @@ thread_local! {
 *
 */
 pub fn game_loop(memory: &mut GameMemory) {
+    // Gotta do this first
     Minions::clean_up_dead_creeps(memory);
 
+    // Now we run the phases of the game AI
     Managers::run(memory);
     Minions::run(memory);
 }

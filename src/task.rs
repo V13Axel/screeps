@@ -22,7 +22,7 @@ impl Action {
             Self::Idle => {},
             Self::Upgrade(controller_id) => CreepAction::upgrade(creep, controller_id, memory),
             Self::Harvest(source) => CreepAction::harvest(creep, source, memory),
-            Self::Build(site) => CreepAction::build(creep, site, memory),
+            Self::Build(site_id) => CreepAction::build(creep, site_id, memory),
         }
     }
 }
