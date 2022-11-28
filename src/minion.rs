@@ -43,12 +43,11 @@ impl Minions {
             .collect::<HashMap<String, Creep>>();
 
         game_memory.creeps.iter_mut().for_each(|(creep_name, creep_memory)| {
-            let task = creep_memory.current_task.to_owned();
-            task.run(
-                creeps.get(
-                    &creep_name.to_owned()
-                ).unwrap(), creep_memory
-            );
+            if let Some(creep) = creeps.get(&creep_name.to_owned()) {
+                let task = creep_memory.current_task.to_owned();
+                task.run(creep, creep_memory);
+
+            }
         })
     }
 
