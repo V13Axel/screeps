@@ -1,9 +1,9 @@
 use std::{collections::HashMap, cmp::Ordering};
 
-use log::{debug, info};
-use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, HasId, ConstructionSite, ObjectId, MaybeHasTypedId};
+use log::info;
+use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, ConstructionSite, ObjectId, MaybeHasTypedId};
 
-use crate::{mem::{GameMemory, CreepMemory}, util::{self, screeps::Screeps}, minion::{MinionType, Minions}, task::{upgrade::Upgrade, harvest::Harvest, TaskProps, Action}};
+use crate::{mem::{GameMemory, CreepMemory}, util::{self, screeps::Screeps}, minion::MinionType, task::Action};
 
 pub struct TaskManager {
     rooms: Vec<Room>,
@@ -111,7 +111,7 @@ impl TaskManager {
     }
 
     fn _room_upgrade_tasks(room: &Room, game_memory: &mut GameMemory) {
-        let upgrading_creeps = Screeps::get_screeps_doing(Upgrade::for_room(room), game_memory);
+        let upgrading_creeps = Screeps::get_screeps_doing(Action::Upgrade(room.controller().unwrap().id()), game_memory);
         let total_tasks = 4 - upgrading_creeps.len();
 
         let room_tasks = game_memory.room_task_queues.entry(room.name().to_string()).or_default().entry(MinionType::Upgrader).or_default();
@@ -128,7 +128,7 @@ impl TaskManager {
 
         for _ in 1..needed_tasks {
             room_tasks.push(
-                Upgrade::for_room(room)
+                Action::Upgrade(room.controller().unwrap().id())
             )
         }
     }

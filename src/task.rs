@@ -1,12 +1,10 @@
 use std::fmt::Debug;
 
-use screeps::{ObjectId, RawObjectId, StructureController, StructureSpawn, ConstructionSite, Source, Creep};
+use screeps::{ObjectId, RawObjectId, StructureController, ConstructionSite, Source, Creep};
 use serde::{Serialize, Deserialize};
 
 use crate::{mem::CreepMemory, action::CreepAction};
 
-pub mod upgrade;
-pub mod harvest;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Action {
@@ -23,7 +21,7 @@ impl Action {
                 CreepAction::move_near(creep, creep.room().unwrap().controller().unwrap().pos().into(), memory);
             },
             Self::Upgrade(controller_id) => CreepAction::upgrade(creep, controller_id, memory),
-            Self::Harvest(source) => CreepAction::harvest(creep, source, memory),
+            Self::Harvest(_) => CreepAction::harvest(creep, memory),
             Self::Build(site_id) => CreepAction::build(creep, site_id, memory),
         }
     }

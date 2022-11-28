@@ -1,5 +1,5 @@
-use log::{debug, info};
-use screeps::{Creep, ObjectId, ResourceType, ReturnCode, Source, HasPosition, RoomPosition, Position, SharedCreepProperties, StructureController, ConstructionSite, find, HasTypedId};
+use log::debug;
+use screeps::{Creep, ObjectId, ResourceType, ReturnCode, HasPosition, RoomPosition, Position, SharedCreepProperties, StructureController, ConstructionSite, find, look};
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::JsValue;
 
@@ -39,7 +39,6 @@ impl CreepAction {
     }
 
     fn do_movement(creep: &Creep, position: &Position, current_path: &Option<CreepPath>, distance: MovementDistance) -> Option<CreepPath> {
-        // info!("Running movement for {:?}", creep.name());
         let path = match current_path {
             Some(path) => path.to_owned(),
             None => {
@@ -67,14 +66,14 @@ impl CreepAction {
         }
     }
 
-    pub fn harvest(creep: &Creep, source_id: &ObjectId<Source>, memory: &mut CreepMemory) {
+    pub fn harvest(creep: &Creep, memory: &mut CreepMemory) {
         memory.current_task_step = match memory.current_task_step {
             Some(step) => match step {
                 ActionStep::Panic(return_code) => {
                     creep.say(&format!("{:?}", return_code), true);
 
                     Some(ActionStep::Harvesting)
-                }
+                },
                 ActionStep::Harvesting => {
                     if let Action::Harvest(source_id) = memory.current_task {
                         if creep.store().get_free_capacity(Some(ResourceType::Energy)) == 0 {
@@ -88,6 +87,11 @@ impl CreepAction {
                                     ReturnCode::Full => Some(ActionStep::Depositing),
                                     ReturnCode::NotInRange => {
                                         Self::move_near(creep, source.pos(), memory);
+
+                                        let mut on_ground = creep.pos().look_for(look::ENERGY);
+                                        if on_ground.len() > 0{
+                                            creep.pickup(&on_ground.pop().unwrap());
+                                        }
 
                                         Some(ActionStep::Harvesting)
                                     },
@@ -178,7 +182,7 @@ impl CreepAction {
                             ReturnCode::Ok => {
                                 Some(ActionStep::Upgrading)
                             },
-                            r => {
+                            _ => {
                                 Some(ActionStep::Upgrading)
                             }
                         }
@@ -237,7 +241,7 @@ impl CreepAction {
                                 ReturnCode::Ok => {
                                     Some(ActionStep::Upgrading)
                                 },
-                                r => {
+                                _ => {
                                     Some(ActionStep::Upgrading)
                                 }
                             }

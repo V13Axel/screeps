@@ -1,6 +1,5 @@
 use std::{fmt::Display, collections::HashMap};
 
-use log::info;
 use screeps::{game, SharedCreepProperties, Creep};
 use serde::{Serialize, Deserialize};
 use crate::mem::GameMemory;

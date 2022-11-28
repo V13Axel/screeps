@@ -36,23 +36,17 @@ impl SpawnManager {
     }
 
     pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Action>>, creep_memories: &mut HashMap<String, CreepMemory>) {
-        // if spawner.spawning().is_some() || spawner.store().get_used_capacity(Some(ResourceType::Energy)) < 300 {
-        //     info!("Can't spawn right now, energy too low or already spawning");
-        //
-        //     return;
-        // }
-
         for (minion_type, tasks) in _room_tasks.iter() {
-            for task in tasks.iter() {
+            for _ in tasks.iter() {
                 info!("Spawning needed {:?}", minion_type);
-                self.spawn_it(minion_type, spawner, task, creep_memories);
+                self.spawn_it(minion_type, spawner, creep_memories);
 
                 return;
             }
         }
     }
 
-    fn spawn_it(&self, minion_type: &MinionType, spawner: StructureSpawn, task: &Action, creep_memories: &mut HashMap<String, CreepMemory>) {
+    fn spawn_it(&self, minion_type: &MinionType, spawner: StructureSpawn, creep_memories: &mut HashMap<String, CreepMemory>) {
         let mut parts: Vec<Part> = vec![];
         let new_name = format!("{}{}", minion_type.to_string(), game::time());
 
