@@ -27,6 +27,7 @@ impl Upgrade {
         
         controller_id.resolve().expect("How the hell did you manage that")
     }
+
     pub fn for_room(room: &Room) -> Self {
         let controller = room.controller().unwrap().to_owned();
 

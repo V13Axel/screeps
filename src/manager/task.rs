@@ -58,6 +58,8 @@ impl TaskManager {
             }
 
             task.assign_creep(creep);
+            memory.current_task = task.get_workable_name();
+            return;
         }
     }
 
