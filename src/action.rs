@@ -82,7 +82,7 @@ impl CreepAction {
                         } else {
                             if let Some(source) = source_id.resolve() {
                                 let harvest_result = creep.harvest(&source);
-                                info!("{:?}", harvest_result);
+                                // info!("{:?}", harvest_result);
                                 match harvest_result {
                                     ReturnCode::Ok => Some(ActionStep::Harvesting),
                                     ReturnCode::Full => Some(ActionStep::Depositing),
@@ -139,8 +139,6 @@ impl CreepAction {
     }
 
     pub fn upgrade(creep: &Creep, controller_id: &ObjectId<StructureController>, memory: &mut CreepMemory) {
-        let say = format!("{:?}", memory.current_task_step);
-        creep.say(&say, true);
         let controller = controller_id.resolve().unwrap();
 
         memory.current_task_step = match memory.current_task_step {
@@ -149,23 +147,28 @@ impl CreepAction {
                     if creep.store().get_free_capacity(Some(ResourceType::Energy)) == 0 {
                         Some(ActionStep::Upgrading)
                     } else {
-                        let mut sources = creep.room().unwrap().find(find::SOURCES);
-                        let source_id = sources.pop().unwrap();
+                        let source = creep.room().unwrap().find(find::SOURCES).pop().unwrap();
+                        let harvest_result = creep.harvest(&source);
+                        // info!("{:?}", harvest_result);
+                        match harvest_result {
+                            ReturnCode::Ok => Some(ActionStep::Harvesting),
+                            ReturnCode::Full => Some(ActionStep::Upgrading),
+                            ReturnCode::NotInRange => {
+                                Self::move_near(creep, source.pos(), memory);
 
-                        CreepAction::harvest(creep, &source_id.id(), memory);
-
-                        Some(ActionStep::Harvesting)
+                                Some(ActionStep::Harvesting)
+                            },
+                            ReturnCode::Tired => Some(ActionStep::Harvesting),
+                            _ => Some(ActionStep::Panic(harvest_result))
+                        }
                     }
-                },
+                }
                 ActionStep::Upgrading => {
                     if creep.store().get_used_capacity(Some(ResourceType::Energy)) == 0 {
                         Some(ActionStep::Harvesting)
                     } else {
-                        info!("Creep has energy");
-
                         match creep.upgrade_controller(&controller) {
                             ReturnCode::NotInRange => {
-                                info!("Not in range, moving");
                                 CreepAction::move_near(creep, Position::from(controller.pos()), memory);
                                 Some(ActionStep::Upgrading)
                             },
@@ -173,11 +176,9 @@ impl CreepAction {
                                 Some(ActionStep::Harvesting)
                             },
                             ReturnCode::Ok => {
-                                info!("Upgrade succeeded");
                                 Some(ActionStep::Upgrading)
                             },
                             r => {
-                                info!("Upgrade error by {:?}: {:?}", creep.name(), r);
                                 Some(ActionStep::Upgrading)
                             }
                         }

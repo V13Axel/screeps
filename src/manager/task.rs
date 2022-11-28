@@ -32,6 +32,7 @@ impl TaskManager {
                 &mut game_memory.creeps.entry(creep.name()).or_default(),
                 &mut game_memory.room_task_queues
             );
+            info!("New creep memory: {:?}", game_memory.creeps.entry(creep.name()));
         }
 }
 
@@ -49,8 +50,8 @@ impl TaskManager {
             .entry(creep_type.to_owned())
             .or_default();
 
-        // info!("Assigning for {:?}", creep_type);
-        // info!("{:?}", tasks_for_creep);
+        info!("Assigning for {:?}", creep_type);
+        info!("{:?}", tasks_for_creep);
         
         if let Some(task) = tasks_for_creep.pop() {
             memory.current_task = task;
