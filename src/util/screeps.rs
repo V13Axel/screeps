@@ -1,7 +1,7 @@
 use log::info;
 use screeps::{Creep, game, SharedCreepProperties};
 
-use crate::{mem::{GameMemory, CreepMemory}, task::Action};
+use crate::{mem::{GameMemory, CreepMemory}, task::Action, minion::MinionType};
 
 pub struct Screeps {}
 
@@ -22,5 +22,12 @@ impl Screeps {
             creep_memory.current_task == task
         }).map(|(_,creep_memory)| creep_memory.to_owned())
           .collect()
+    }
+
+    pub fn of_type(minion_type: MinionType, game_memory: &mut GameMemory) -> Vec<String> {
+        game_memory.creeps.iter().filter(|(_, creep_memory)| {
+            creep_memory.worker_type == minion_type
+        }).map(|(creep_name,_)| creep_name.to_owned())
+            .collect()
     }
 }

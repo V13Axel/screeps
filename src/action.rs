@@ -173,7 +173,7 @@ impl CreepAction {
                                 Some(ActionStep::Upgrading)
                             },
                             ReturnCode::NotEnough => {
-                                Some(ActionStep::Harvesting)
+                                Some(ActionStep::CollectingFrom)
                             },
                             ReturnCode::Ok => {
                                 Some(ActionStep::Upgrading)
@@ -197,6 +197,59 @@ impl CreepAction {
     }
 
     pub fn build(creep: &Creep, site: &ObjectId<ConstructionSite>, memory: &mut CreepMemory) {
-        info!("Build called");
+        if let Some(site) = site.resolve() {
+            memory.current_task_step = match memory.current_task_step {
+                Some(step) => {
+                    match step {
+                        ActionStep::CollectingFrom => {
+                            // Just go harvest for now
+                            Some(ActionStep::Harvesting)
+                        },
+                        ActionStep::Harvesting => {
+                            if creep.store().get_free_capacity(Some(ResourceType::Energy)) == 0 {
+                                Some(ActionStep::Upgrading)
+                            } else {
+                                let source = creep.room().unwrap().find(find::SOURCES).pop().unwrap();
+                                let harvest_result = creep.harvest(&source);
+                                // info!("{:?}", harvest_result);
+                                match harvest_result {
+                                    ReturnCode::Ok => Some(ActionStep::Harvesting),
+                                    ReturnCode::Full => Some(ActionStep::Upgrading),
+                                    ReturnCode::NotInRange => {
+                                        Self::move_near(creep, source.pos(), memory);
+
+                                        Some(ActionStep::Harvesting)
+                                    },
+                                    ReturnCode::Tired => Some(ActionStep::Harvesting),
+                                    _ => Some(ActionStep::Panic(harvest_result))
+                                }
+                            }
+                        },
+                        ActionStep::Building => {
+                            match creep.build(&site) {
+                                ReturnCode::NotInRange => {
+                                    CreepAction::move_near(creep, Position::from(site.pos()), memory);
+                                    Some(ActionStep::Upgrading)
+                                },
+                                ReturnCode::NotEnough => {
+                                    Some(ActionStep::CollectingFrom)
+                                },
+                                ReturnCode::Ok => {
+                                    Some(ActionStep::Upgrading)
+                                },
+                                r => {
+                                    Some(ActionStep::Upgrading)
+                                }
+                            }
+
+                        },
+                        _ => {
+                            Some(ActionStep::Building)
+                        }
+                    }
+                },
+                None => Some(ActionStep::Building)
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, cmp::Ordering};
 
 use log::{debug, info};
-use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, HasId};
+use screeps::{Room, Creep, SharedCreepProperties, find, HasTypedId, HasId, ConstructionSite, ObjectId, MaybeHasTypedId};
 
 use crate::{mem::{GameMemory, CreepMemory}, util::{self, screeps::Screeps}, minion::{MinionType, Minions}, task::{upgrade::Upgrade, harvest::Harvest, TaskProps, Action}};
 
@@ -67,16 +67,57 @@ impl TaskManager {
     pub fn scan_room(&self, room: &Room, game_memory: &mut GameMemory) {
         Self::_room_upgrade_tasks(room, game_memory);
         Self::_source_harvesting_tasks(room, game_memory);
+        Self::_building_tasks(room, game_memory);
+    }
+
+    fn _building_tasks(room: &Room, game_memory: &mut GameMemory) {
+        let mut sites = room.find(find::CONSTRUCTION_SITES);
+        if sites.len() < 1 {
+            return;
+        }
+
+        let being_worked: Vec<ObjectId<ConstructionSite>> = game_memory.creeps
+            .iter()
+            .map(|(_,creep_memory)| {
+                match creep_memory.current_task {
+                    Action::Build(site) => Some(site),
+                    _ => None
+                }
+            })
+            .filter(|option| option.is_some())
+            .map(|option| option.unwrap())
+            .collect();
+
+        sites.retain(|site| -> bool {
+            if let Some(id) = site.try_id() {
+                !being_worked.contains(&id)
+            } else {
+                false
+            }
+        });
+
+        let room_sites = game_memory.room_task_queues
+            .entry(room.name().to_string())
+            .or_default()
+            .entry(MinionType::SimpleWorker)
+            .or_default();
+
+        for site in sites.iter() {
+            if let Some(id) = site.try_id() {
+                // info!("Would push task for {:?}", id);
+                room_sites.push(Action::Build(id));
+            }
+        }
     }
 
     fn _room_upgrade_tasks(room: &Room, game_memory: &mut GameMemory) {
         let upgrading_creeps = Screeps::get_screeps_doing(Upgrade::for_room(room), game_memory);
-        let total_tasks = 5 - upgrading_creeps.len();
+        let total_tasks = 4 - upgrading_creeps.len();
 
         let room_tasks = game_memory.room_task_queues.entry(room.name().to_string()).or_default().entry(MinionType::Upgrader).or_default();
         let needed_tasks = std::cmp::max(0, total_tasks - room_tasks.len());
 
-        if room_tasks.len() > 5 || needed_tasks > 5 {
+        if room_tasks.len() > 4 || needed_tasks > 4 {
             info!("room_tasks length is {}, needed tasks is {}. One of those means we should clear the queue.", room_tasks.len(), needed_tasks);
             // We messed up
             room_tasks.clear();
