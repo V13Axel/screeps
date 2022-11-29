@@ -14,7 +14,7 @@ pub struct GameMemory {
 
     // Memory
     pub creeps: HashMap<String, CreepMemory>,
-    pub room_memories: HashMap<String, RoomMemory>,
+    pub rooms: HashMap<String, RoomMemory>,
     pub structure_memories: HashMap<ObjectId<Structure>, StructureMemory>,
 
     // Task queues
@@ -27,7 +27,7 @@ impl GameMemory {
             needs_deserialized: true,
             last_managers_tick: 0,
             creeps: HashMap::new(),
-            room_memories: HashMap::new(),
+            rooms: HashMap::new(),
             structure_memories: HashMap::new(),
             room_task_queues: HashMap::new(),
         }
@@ -39,8 +39,8 @@ pub struct RoomMemory {
     controller_level: usize,
 }
 
-impl RoomMemory {
-    pub fn default() -> Self {
+impl Default for RoomMemory {
+    fn default() -> Self {
         Self {
             controller_level: 1
         }

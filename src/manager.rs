@@ -2,10 +2,12 @@ use screeps::{Room, game};
 
 use crate::mem::GameMemory;
 
-use self::{task::TaskManager, spawn::SpawnManager};
+use self::{task::TaskManager, spawn::SpawnManager, construction::ConstructionManager};
 
 mod spawn;
 mod task;
+mod construction;
+mod siteplanner;
 
 pub struct Managers;
 
@@ -25,6 +27,15 @@ impl Managers {
         let rooms: Vec<Room> = game::rooms()
             .values()
             .collect();
+
+        rooms.iter().for_each(|room| {
+            ConstructionManager::with_room(room)
+                .scan(
+                    memory.rooms.entry(
+                        room.name().to_string()
+                    ).or_default()
+                );
+        });
 
         TaskManager::with_rooms(&rooms).scan(memory);
         TaskManager::assign(memory);

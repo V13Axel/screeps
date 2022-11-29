@@ -32,7 +32,7 @@ impl TaskManager {
                 &mut game_memory.creeps.entry(creep.name()).or_default(),
                 &mut game_memory.room_task_queues
             );
-            info!("New creep memory: {:?}", game_memory.creeps.entry(creep.name()));
+            // info!("New creep memory: {:?}", game_memory.creeps.entry(creep.name()));
         }
 }
 
@@ -50,8 +50,8 @@ impl TaskManager {
             .entry(creep_type.to_owned())
             .or_default();
 
-        info!("Assigning for {:?}", creep_type);
-        info!("{:?}", tasks_for_creep);
+        // info!("Assigning for {:?}", creep_type);
+        // info!("{:?}", tasks_for_creep);
         
         if let Some(task) = tasks_for_creep.pop() {
             memory.current_task = task;
@@ -118,13 +118,13 @@ impl TaskManager {
         let needed_tasks = std::cmp::max(0, total_tasks - room_tasks.len());
 
         if room_tasks.len() > 4 || needed_tasks > 4 {
-            info!("room_tasks length is {}, needed tasks is {}. One of those means we should clear the queue.", room_tasks.len(), needed_tasks);
+            // info!("room_tasks length is {}, needed tasks is {}. One of those means we should clear the queue.", room_tasks.len(), needed_tasks);
             // We messed up
             room_tasks.clear();
             return;
         }
 
-        info!("Upgrade needs {} tasks: (5 - {}) - {}", needed_tasks, upgrading_creeps.len(), room_tasks.len());
+        // info!("Upgrade needs {} tasks: (5 - {}) - {}", needed_tasks, upgrading_creeps.len(), room_tasks.len());
 
         for _ in 1..needed_tasks {
             room_tasks.push(
@@ -165,13 +165,13 @@ impl TaskManager {
             let needed_tasks = std::cmp::max(0, total_tasks - room_tasks.len());
 
 
-            info!("Harvest needs {} tasks: ({} - {}) - {}", needed_tasks, spaces_available, working_creeps.len(), room_tasks.len());
+            // info!("Harvest needs {} tasks: ({} - {}) - {}", needed_tasks, spaces_available, working_creeps.len(), room_tasks.len());
 
             for _ in 1..needed_tasks {
                 room_tasks.push(Action::Harvest(source.id()));
             }
             if room_tasks.len() > max_possible_sources {
-                info!("room_tasks length is {}, max_possible is {}. Clearing the harvester queue.", room_tasks.len(), max_possible_sources);
+                // info!("room_tasks length is {}, max_possible is {}. Clearing the harvester queue.", room_tasks.len(), max_possible_sources);
                 // We messed up
                 room_tasks.clear();
                 return;

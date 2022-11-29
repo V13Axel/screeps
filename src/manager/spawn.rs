@@ -23,7 +23,7 @@ impl SpawnManager {
 
     pub fn spawn(&self, game_memory: &mut GameMemory) {
         for spawner in self.spawners.iter() {
-            info!("Running spawner {}", spawner.name().to_string());
+            // info!("Running spawner {}", spawner.name().to_string());
             let id = spawner.room()
                 .unwrap()
                 .name();
@@ -38,7 +38,7 @@ impl SpawnManager {
     pub fn spawn_if_needed(&self, spawner: StructureSpawn, _room_tasks: &mut HashMap<MinionType, Vec<Action>>, creep_memories: &mut HashMap<String, CreepMemory>) {
         for (minion_type, tasks) in _room_tasks.iter() {
             for _ in tasks.iter() {
-                info!("Spawning needed {:?}", minion_type);
+                // info!("Spawning needed {:?}", minion_type);
                 self.spawn_it(minion_type, spawner, creep_memories);
 
                 return;
