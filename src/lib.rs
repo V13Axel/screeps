@@ -18,6 +18,7 @@ mod util;
 mod minion;
 mod manager;
 mod task;
+mod room;
 
 thread_local! {
     static GAME_MEMORY: RefCell<GameMemory> = RefCell::new(

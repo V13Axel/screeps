@@ -1,7 +1,7 @@
 use log::info;
 use screeps::{Room, find, StructureProperties, StructureType, Structure, StructureObject, ConstructionSite};
 
-use crate::mem::{GameMemory, RoomMemory};
+use crate::{mem::{GameMemory, RoomMemory}, room::RoomRectangle};
 
 pub struct ConstructionManager {
     room: Room,
@@ -15,13 +15,14 @@ impl ConstructionManager {
     }
 
     pub fn scan(&self, memory: &mut RoomMemory) {
+        let room_grid = RoomRectangle::for_room(&self.room);
         let controller_level = self.room.controller().unwrap().level();
         if controller_level > 1 {
             self.choose_extension_locations(controller_level.into());
         }
 
         if controller_level > 2 {
-            self.choose_road_locations();
+            // self.choose_road_locations();
         }
     }
 
@@ -52,6 +53,6 @@ impl ConstructionManager {
     }
 
     fn choose_road_locations(&self) {
-        todo!()
+        // todo!()
     }
 }

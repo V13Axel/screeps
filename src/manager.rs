@@ -14,9 +14,9 @@ pub struct Managers;
 impl Managers {
     pub fn run(memory: &mut GameMemory) {
         // Only want to run managers if it's been 20 ticks since last time
-        if game::time() - memory.last_managers_tick < 20 {
-            return;
-        }
+        // if game::time() - memory.last_managers_tick < 20 {
+        //     return;
+        // }
 
         Self::handle_managers(memory);
 
