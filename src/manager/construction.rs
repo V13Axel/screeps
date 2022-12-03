@@ -15,7 +15,7 @@ impl ConstructionManager {
     }
 
     pub fn scan(&self, memory: &mut RoomMemory) {
-        let room_grid = RoomRectangle::for_room(&self.room);
+        // let room_grid = RoomRectangle::for_room(&self.room);
         let controller_level = self.room.controller().unwrap().level();
         if controller_level > 1 {
             self.choose_extension_locations(controller_level.into());
